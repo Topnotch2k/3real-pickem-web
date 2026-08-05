@@ -166,7 +166,10 @@ function reconcileMutationPayments(currentPayments, currentPayment, returnedPaym
 export function createManagerPaymentsView() {
   let payments = [];
   let selectedStatus = 'pending';
+  let selectedWeekFilter = 'current';
+  let currentWeekId = '';
   let loadVersion = 0;
+  let weekLoadVersion = 0;
   let lastAppliedLoadVersion = 0;
   let rejectingPaymentId = '';
   const inFlightPaymentIds = new Set();
@@ -232,6 +235,14 @@ export function createManagerPaymentsView() {
   ].forEach(([value, label]) => {
     statusSelect.appendChild(createElement('option', { text: label, attributes: { value } }));
   });
+  const weekSelect = createElement('select', { attributes: { 'aria-label': 'Payment week' } });
+  [
+    ['current', 'Current Week'],
+    ['previous', 'Previous Weeks'],
+    ['all', 'All Weeks'],
+  ].forEach(([value, label]) => {
+    weekSelect.appendChild(createElement('option', { text: label, attributes: { value } }));
+  });
   const back = createElement('button', { className: 'secondary-button', text: 'Manager Dashboard', attributes: { type: 'button' } });
   const message = createElement('p', {
     className: 'muted',
@@ -246,8 +257,17 @@ export function createManagerPaymentsView() {
     rejectingPaymentId = '';
     loadPayments();
   });
+  weekSelect.addEventListener('change', () => {
+    selectedWeekFilter = weekSelect.value;
+    rejectingPaymentId = '';
+    renderPayments();
+  });
 
-  appendChildren(controls, [createField('Payment status', statusSelect), back]);
+  appendChildren(controls, [
+    createField('Payment status', statusSelect),
+    createField('Payment week', weekSelect),
+    back,
+  ]);
   appendChildren(header, [
     createElement('p', { className: 'eyebrow', text: 'League Manager' }),
     createElement('h1', { text: 'Payment Requests' }),
@@ -259,6 +279,24 @@ export function createManagerPaymentsView() {
     message,
   ]);
   appendChildren(wrapper, [header, list]);
+
+  async function loadCurrentWeek() {
+    const currentVersion = ++weekLoadVersion;
+    try {
+      const result = await managerAction('manager.week.get');
+      if (currentVersion !== weekLoadVersion || !wrapper.isConnected) {
+        return;
+      }
+      currentWeekId = result.data && result.data.week ? String(result.data.week.weekId || '') : '';
+      renderPayments();
+    } catch (error) {
+      if (currentVersion !== weekLoadVersion || !wrapper.isConnected) {
+        return;
+      }
+      currentWeekId = '';
+      renderPayments();
+    }
+  }
 
   async function loadPayments(options = {}) {
     const currentVersion = ++loadVersion;
@@ -296,11 +334,26 @@ export function createManagerPaymentsView() {
 
   function renderPayments() {
     list.replaceChildren();
-    if (!payments.length) {
-      list.appendChild(createElement('p', { className: 'muted', text: emptyMessageForStatus(selectedStatus) }));
+    const visiblePayments = payments.filter((payment) => {
+      if (selectedWeekFilter === 'all') {
+        return true;
+      }
+      if (selectedWeekFilter === 'previous') {
+        return payment.weekId !== currentWeekId;
+      }
+      return Boolean(currentWeekId) && payment.weekId === currentWeekId;
+    });
+    if (!visiblePayments.length) {
+      const statusPrefix = selectedStatus === 'all' ? '' : `${selectedStatus} `;
+      const emptyMessage = selectedWeekFilter === 'current'
+        ? `No ${statusPrefix}payment requests for the current Week.`
+        : selectedWeekFilter === 'previous'
+          ? `No ${statusPrefix}payment requests from previous Weeks.`
+          : emptyMessageForStatus(selectedStatus);
+      list.appendChild(createElement('p', { className: 'muted', text: emptyMessage }));
       return;
     }
-    payments.forEach((payment) => list.appendChild(createPaymentCard(payment)));
+    visiblePayments.forEach((payment) => list.appendChild(createPaymentCard(payment)));
   }
 
   function applyMutationPayment(currentPayment, returnedPayment, successMessage) {
@@ -432,6 +485,7 @@ export function createManagerPaymentsView() {
 
     inFlightPaymentIds.add(payment.paymentId);
     statusSelect.disabled = true;
+    weekSelect.disabled = true;
     setDisabled(true);
     mutationStatus.classList.remove('error-text');
     mutationStatus.textContent = 'Approving payment...';
@@ -463,6 +517,7 @@ export function createManagerPaymentsView() {
     } finally {
       inFlightPaymentIds.delete(payment.paymentId);
       statusSelect.disabled = inFlightPaymentIds.size > 0;
+      weekSelect.disabled = inFlightPaymentIds.size > 0;
       const reconciliation = reconcileBlockedPayments();
       if (reconciliation.changed) {
         renderPayments();
@@ -480,6 +535,7 @@ export function createManagerPaymentsView() {
     }
     inFlightPaymentIds.add(payment.paymentId);
     statusSelect.disabled = true;
+    weekSelect.disabled = true;
     setDisabled(true);
     mutationStatus.classList.remove('error-text');
     mutationStatus.textContent = 'Rejecting payment...';
@@ -509,6 +565,7 @@ export function createManagerPaymentsView() {
     } finally {
       inFlightPaymentIds.delete(payment.paymentId);
       statusSelect.disabled = inFlightPaymentIds.size > 0;
+      weekSelect.disabled = inFlightPaymentIds.size > 0;
       const reconciliation = reconcileBlockedPayments();
       if (reconciliation.changed) {
         renderPayments();
@@ -521,5 +578,6 @@ export function createManagerPaymentsView() {
   }
 
   loadPayments();
+  loadCurrentWeek();
   return wrapper;
 }
