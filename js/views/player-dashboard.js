@@ -170,6 +170,8 @@ function createPaymentWorkspace(bootstrapRequest) {
   let paymentsLoaded = false;
   let submitting = false;
   let activeClientRequest = null;
+  let paymentsRequest = null;
+  let paymentRefreshTimeout = null;
 
   const requestCard = createElement('section', { className: 'state-card' });
   const form = createElement('form', { className: 'auth-form' });
@@ -290,22 +292,94 @@ function createPaymentWorkspace(bootstrapRequest) {
     }
   }
 
-  async function loadPayments(initialBootstrapRequest) {
-    historyStatus.classList.remove('error-text');
-    try {
-      const data = initialBootstrapRequest
-        ? await playerDashboardBootstrapSection(initialBootstrapRequest, 'payments')
-        : (await playerAction('player.payments.list')).data;
-      payments = data.payments || [];
-      paymentsLoaded = true;
-      renderHistory();
-      updateFormAvailability();
-    } catch (error) {
-      paymentsLoaded = false;
-      historyStatus.textContent = error.message;
-      historyStatus.classList.add('error-text');
-      updateFormAvailability();
+  async function loadPayments(initialBootstrapRequest, background = false) {
+    if (paymentsRequest) {
+      if (background || initialBootstrapRequest) {
+        return paymentsRequest;
+      }
+      await paymentsRequest;
+      return loadPayments(initialBootstrapRequest, background);
     }
+
+    if (!background) {
+      historyStatus.classList.remove('error-text');
+    }
+    const request = (async () => {
+      try {
+        const data = initialBootstrapRequest
+          ? await playerDashboardBootstrapSection(initialBootstrapRequest, 'payments')
+          : (await playerAction('player.payments.list')).data;
+        payments = data.payments || [];
+        paymentsLoaded = true;
+        historyStatus.classList.remove('error-text');
+        renderHistory();
+        updateFormAvailability();
+      } catch (error) {
+        if (!background) {
+          paymentsLoaded = false;
+          historyStatus.textContent = error.message;
+          historyStatus.classList.add('error-text');
+          updateFormAvailability();
+        }
+      }
+    })();
+    paymentsRequest = request;
+    try {
+      await request;
+    } finally {
+      if (paymentsRequest === request) {
+        paymentsRequest = null;
+      }
+    }
+  }
+
+  function paymentCardsConnected() {
+    return requestCard.isConnected || historyCard.isConnected;
+  }
+
+  function stopPaymentHistoryRefresh() {
+    if (paymentRefreshTimeout !== null) {
+      window.clearTimeout(paymentRefreshTimeout);
+      paymentRefreshTimeout = null;
+    }
+    document.removeEventListener('visibilitychange', handlePaymentVisibilityChange);
+  }
+
+  function schedulePaymentHistoryRefresh() {
+    paymentRefreshTimeout = window.setTimeout(async () => {
+      paymentRefreshTimeout = null;
+      if (!paymentCardsConnected()) {
+        stopPaymentHistoryRefresh();
+        return;
+      }
+      await loadPayments(null, true);
+      if (paymentCardsConnected()) {
+        schedulePaymentHistoryRefresh();
+      } else {
+        stopPaymentHistoryRefresh();
+      }
+    }, 60000);
+  }
+
+  function handlePaymentVisibilityChange() {
+    if (!paymentCardsConnected()) {
+      stopPaymentHistoryRefresh();
+      return;
+    }
+    if (document.visibilityState === 'visible') {
+      loadPayments(null, true);
+    }
+  }
+
+  function startPaymentHistoryRefresh() {
+    document.addEventListener('visibilitychange', handlePaymentVisibilityChange);
+    window.setTimeout(() => {
+      if (paymentCardsConnected()) {
+        schedulePaymentHistoryRefresh();
+      } else {
+        stopPaymentHistoryRefresh();
+      }
+    }, 0);
   }
 
   function clearLogicalRequest() {
@@ -390,6 +464,7 @@ function createPaymentWorkspace(bootstrapRequest) {
 
   loadOptions();
   loadPayments(bootstrapRequest);
+  startPaymentHistoryRefresh();
   return { requestCard, historyCard };
 }
 
