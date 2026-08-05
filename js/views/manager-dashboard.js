@@ -157,6 +157,11 @@ export function createManagerDashboardView(context = {}) {
     text: 'Review Payments',
     attributes: { type: 'button' },
   });
+  const weekButton = createElement('button', {
+    className: 'secondary-button',
+    text: 'Manage Week',
+    attributes: { type: 'button' },
+  });
   const pendingPayments = createElement('p', {
     className: 'status-pill',
     text: 'Pending Payments: 0',
@@ -177,6 +182,9 @@ export function createManagerDashboardView(context = {}) {
 
   paymentsButton.addEventListener('click', () => {
     navigateTo('manager-payments');
+  });
+  weekButton.addEventListener('click', () => {
+    navigateTo('manager-week');
   });
 
   logoutButton.addEventListener('click', async () => {
@@ -216,7 +224,7 @@ export function createManagerDashboardView(context = {}) {
     }
   }
 
-  appendChildren(buttonRow, [playersButton, paymentsButton, logoutButton]);
+  appendChildren(buttonRow, [playersButton, paymentsButton, weekButton, logoutButton]);
   appendChildren(card, [
     createElement('p', { className: 'eyebrow', text: 'League Manager' }),
     createElement('h1', { text: 'Manager Dashboard' }),
@@ -224,7 +232,7 @@ export function createManagerDashboardView(context = {}) {
     createElement('p', { className: 'status-pill', text: `Role: ${manager.role || 'owner'}` }),
     pendingPayments,
     pendingPaymentsStatus,
-    createElement('p', { className: 'muted', text: 'Player management and payment review are active. Weeks, picks, grading, and standings remain out of scope.' }),
+    createElement('p', { className: 'muted', text: 'Week, player, and payment management are active. Grading and standings remain out of scope.' }),
     buttonRow,
   ]);
   wrapper.appendChild(card);

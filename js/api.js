@@ -6,6 +6,7 @@ const READ_ONLY_ACTIONS = new Set([
   'manager.players.list',
   'manager.invite.get',
   'manager.payments.list',
+  'manager.week.get',
   'player.session',
   'player.dashboard.bootstrap',
   'player.invite.get',
