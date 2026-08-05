@@ -164,9 +164,10 @@ function createInviteFriendsCard(player, bootstrapRequest) {
   return card;
 }
 
-function createPaymentWorkspace(bootstrapRequest) {
+function createPaymentWorkspace(bootstrapRequest, entrySheets) {
   let paymentOptions = null;
   let payments = [];
+  let paymentHistoryFilter = 'current';
   let paymentsLoaded = false;
   let submitting = false;
   let activeClientRequest = null;
@@ -194,6 +195,14 @@ function createPaymentWorkspace(bootstrapRequest) {
     className: 'muted',
     text: 'Loading payment requests...',
     attributes: { role: 'status', 'aria-live': 'polite' },
+  });
+  const historyFilter = createElement('select', { attributes: { name: 'paymentHistoryFilter' } });
+  [
+    ['current', 'Current Week'],
+    ['previous', 'Previous Weeks'],
+    ['all', 'All Payments'],
+  ].forEach(([value, label]) => {
+    historyFilter.appendChild(createElement('option', { text: label, attributes: { value } }));
   });
   const historyList = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Payment requests' } });
 
@@ -244,12 +253,26 @@ function createPaymentWorkspace(bootstrapRequest) {
 
   function renderHistory() {
     historyList.replaceChildren();
-    if (!payments.length) {
-      historyStatus.textContent = 'No payment requests yet.';
+    const currentWeekId = paymentOptions && paymentOptions.week && paymentOptions.week.weekId || '';
+    const visiblePayments = payments.filter((payment) => {
+      if (paymentHistoryFilter === 'all') {
+        return true;
+      }
+      if (paymentHistoryFilter === 'previous') {
+        return payment.weekId !== currentWeekId;
+      }
+      return Boolean(currentWeekId) && payment.weekId === currentWeekId;
+    });
+    if (!visiblePayments.length) {
+      historyStatus.textContent = paymentHistoryFilter === 'current'
+        ? 'No payment requests for the current Week.'
+        : paymentHistoryFilter === 'previous'
+          ? 'No payment requests from previous Weeks.'
+          : 'No payment requests yet.';
       return;
     }
     historyStatus.textContent = '';
-    payments.forEach((payment) => {
+    visiblePayments.forEach((payment) => {
       const card = createElement('article', { className: 'player-card' });
       const details = createElement('dl', { className: 'player-meta' });
       [
@@ -282,6 +305,7 @@ function createPaymentWorkspace(bootstrapRequest) {
       message.textContent = '';
       message.classList.remove('error-text');
       populateOptions();
+      renderHistory();
     } catch (error) {
       paymentOptions = null;
       price.textContent = 'Entry price unavailable.';
@@ -309,11 +333,17 @@ function createPaymentWorkspace(bootstrapRequest) {
         const data = initialBootstrapRequest
           ? await playerDashboardBootstrapSection(initialBootstrapRequest, 'payments')
           : (await playerAction('player.payments.list')).data;
-        payments = data.payments || [];
+        const nextPayments = data.payments || [];
+        const approvedPaymentReceived = payments.some((payment) => payment.status === 'pending' &&
+          nextPayments.some((nextPayment) => nextPayment.paymentId === payment.paymentId && nextPayment.status === 'approved'));
+        payments = nextPayments;
         paymentsLoaded = true;
         historyStatus.classList.remove('error-text');
         renderHistory();
         updateFormAvailability();
+        if (approvedPaymentReceived) {
+          entrySheets.refresh();
+        }
       } catch (error) {
         if (!background) {
           paymentsLoaded = false;
@@ -337,6 +367,10 @@ function createPaymentWorkspace(bootstrapRequest) {
     return requestCard.isConnected || historyCard.isConnected;
   }
 
+  function dashboardRefreshConnected() {
+    return paymentCardsConnected() || entrySheets.isConnected();
+  }
+
   function stopPaymentHistoryRefresh() {
     if (paymentRefreshTimeout !== null) {
       window.clearTimeout(paymentRefreshTimeout);
@@ -348,12 +382,19 @@ function createPaymentWorkspace(bootstrapRequest) {
   function schedulePaymentHistoryRefresh() {
     paymentRefreshTimeout = window.setTimeout(async () => {
       paymentRefreshTimeout = null;
-      if (!paymentCardsConnected()) {
+      if (!dashboardRefreshConnected()) {
         stopPaymentHistoryRefresh();
         return;
       }
-      await loadPayments(null, true);
+      const refreshes = [];
       if (paymentCardsConnected()) {
+        refreshes.push(loadPayments(null, true));
+      }
+      if (entrySheets.isConnected()) {
+        refreshes.push(entrySheets.refresh());
+      }
+      await Promise.all(refreshes);
+      if (dashboardRefreshConnected()) {
         schedulePaymentHistoryRefresh();
       } else {
         stopPaymentHistoryRefresh();
@@ -362,19 +403,24 @@ function createPaymentWorkspace(bootstrapRequest) {
   }
 
   function handlePaymentVisibilityChange() {
-    if (!paymentCardsConnected()) {
+    if (!dashboardRefreshConnected()) {
       stopPaymentHistoryRefresh();
       return;
     }
     if (document.visibilityState === 'visible') {
-      loadPayments(null, true);
+      if (paymentCardsConnected()) {
+        loadPayments(null, true);
+      }
+      if (entrySheets.isConnected()) {
+        entrySheets.refresh();
+      }
     }
   }
 
   function startPaymentHistoryRefresh() {
     document.addEventListener('visibilitychange', handlePaymentVisibilityChange);
     window.setTimeout(() => {
-      if (paymentCardsConnected()) {
+      if (dashboardRefreshConnected()) {
         schedulePaymentHistoryRefresh();
       } else {
         stopPaymentHistoryRefresh();
@@ -393,6 +439,10 @@ function createPaymentWorkspace(bootstrapRequest) {
   quantitySelect.addEventListener('change', () => {
     clearLogicalRequest();
     updateTotal();
+  });
+  historyFilter.addEventListener('change', () => {
+    paymentHistoryFilter = historyFilter.value;
+    renderHistory();
   });
 
   form.addEventListener('submit', async (event) => {
@@ -458,6 +508,7 @@ function createPaymentWorkspace(bootstrapRequest) {
   appendChildren(historyCard, [
     createElement('p', { className: 'eyebrow', text: 'Payments' }),
     createElement('h2', { text: 'My Payment Requests' }),
+    createField('Payment history', historyFilter),
     historyStatus,
     historyList,
   ]);
@@ -469,6 +520,8 @@ function createPaymentWorkspace(bootstrapRequest) {
 }
 
 function createEntrySheetsCard(bootstrapRequest) {
+  let entrySheetsRequest = null;
+  let entrySheetsRefreshQueued = false;
   const card = createElement('section', { className: 'state-card' });
   const status = createElement('p', {
     className: 'muted',
@@ -485,65 +538,98 @@ function createEntrySheetsCard(bootstrapRequest) {
     list,
   ]);
 
-  async function loadEntrySheets() {
-    status.classList.remove('error-text');
+  async function loadEntrySheets(initialBootstrapRequest = null, background = false) {
+    if (entrySheetsRequest) {
+      if (!background) {
+        return entrySheetsRequest;
+      }
+      entrySheetsRefreshQueued = true;
+      await entrySheetsRequest;
+      if (!entrySheetsRefreshQueued || !card.isConnected) {
+        return;
+      }
+      entrySheetsRefreshQueued = false;
+      return loadEntrySheets(null, true);
+    }
+    if (!background) {
+      status.classList.remove('error-text');
+    }
+    const request = (async () => {
+      try {
+        const data = initialBootstrapRequest
+          ? await playerDashboardBootstrapSection(initialBootstrapRequest, 'entrySheets')
+          : (await playerAction('player.week.entrySheets')).data;
+        status.classList.remove('error-text');
+        const entries = data.entries || [];
+        list.replaceChildren();
+        if (!data.week) {
+          status.textContent = 'No Week is currently open for picks.';
+          return;
+        }
+        if (!entries.length) {
+          status.textContent = 'No active entry sheets are available for the current Week.';
+          return;
+        }
+        status.textContent = '';
+        entries.forEach((entry) => {
+          const entryCard = createElement('article', { className: 'player-card' });
+          const details = createElement('dl', { className: 'player-meta' });
+          [
+            ['Week', `Season ${data.week.season} · Week ${data.week.nflWeek}`],
+            ['Progress', `${entry.completedPicks} of ${entry.totalGames} picks completed`],
+          ].forEach(([label, value]) => {
+            details.appendChild(createElement('dt', { text: label }));
+            details.appendChild(createElement('dd', { text: value }));
+          });
+          const open = createElement('button', {
+            className: 'primary-button',
+            text: entry.completedPicks > 0 ? 'Edit Picks' : 'Make Picks',
+            attributes: { type: 'button' },
+          });
+          open.addEventListener('click', () => {
+            navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
+          });
+          const buttons = createElement('div', { className: 'button-row' });
+          buttons.appendChild(open);
+          appendChildren(entryCard, [
+            createElement('h3', { text: entry.entryLabel || 'Entry' }),
+            createElement('span', {
+              className: `status-pill ${entry.status === 'active' ? '' : 'status-pill-muted'}`,
+              text: entry.status === 'active' ? 'Active' : 'Unknown',
+            }),
+            createElement('span', {
+              className: `status-pill ${entry.complete ? '' : 'status-pill-muted'}`,
+              text: entry.complete ? 'Complete' : 'In progress',
+            }),
+            details,
+            buttons,
+          ]);
+          list.appendChild(entryCard);
+        });
+      } catch (error) {
+        if (!background) {
+          status.textContent = error.message;
+          status.classList.add('error-text');
+          list.replaceChildren();
+        }
+      }
+    })();
+    entrySheetsRequest = request;
     try {
-      const data = await playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets') || {};
-      const entries = data.entries || [];
-      list.replaceChildren();
-      if (!data.week) {
-        status.textContent = 'No Week is currently open for picks.';
-        return;
+      await request;
+    } finally {
+      if (entrySheetsRequest === request) {
+        entrySheetsRequest = null;
       }
-      if (!entries.length) {
-        status.textContent = 'No active entry sheets are available for the current Week.';
-        return;
-      }
-      status.textContent = '';
-      entries.forEach((entry) => {
-        const entryCard = createElement('article', { className: 'player-card' });
-        const details = createElement('dl', { className: 'player-meta' });
-        [
-          ['Week', `Season ${data.week.season} · Week ${data.week.nflWeek}`],
-          ['Progress', `${entry.completedPicks} of ${entry.totalGames} picks completed`],
-        ].forEach(([label, value]) => {
-          details.appendChild(createElement('dt', { text: label }));
-          details.appendChild(createElement('dd', { text: value }));
-        });
-        const open = createElement('button', {
-          className: 'primary-button',
-          text: entry.completedPicks > 0 ? 'Edit Picks' : 'Make Picks',
-          attributes: { type: 'button' },
-        });
-        open.addEventListener('click', () => {
-          navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
-        });
-        const buttons = createElement('div', { className: 'button-row' });
-        buttons.appendChild(open);
-        appendChildren(entryCard, [
-          createElement('h3', { text: entry.entryLabel || 'Entry' }),
-          createElement('span', {
-            className: `status-pill ${entry.status === 'active' ? '' : 'status-pill-muted'}`,
-            text: entry.status === 'active' ? 'Active' : 'Unknown',
-          }),
-          createElement('span', {
-            className: `status-pill ${entry.complete ? '' : 'status-pill-muted'}`,
-            text: entry.complete ? 'Complete' : 'In progress',
-          }),
-          details,
-          buttons,
-        ]);
-        list.appendChild(entryCard);
-      });
-    } catch (error) {
-      status.textContent = error.message;
-      status.classList.add('error-text');
-      list.replaceChildren();
     }
   }
 
-  loadEntrySheets();
-  return card;
+  loadEntrySheets(bootstrapRequest);
+  return {
+    card,
+    isConnected: () => card.isConnected,
+    refresh: () => loadEntrySheets(null, true),
+  };
 }
 
 export function createPlayerDashboardView(context = {}) {
@@ -555,7 +641,8 @@ export function createPlayerDashboardView(context = {}) {
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
   const details = createElement('dl', { className: 'player-meta' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
-  const paymentWorkspace = createPaymentWorkspace(bootstrapRequest);
+  const entrySheets = createEntrySheetsCard(bootstrapRequest);
+  const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets);
 
   [
     ['Profile', 'Active'],
@@ -586,7 +673,7 @@ export function createPlayerDashboardView(context = {}) {
     card,
     paymentWorkspace.requestCard,
     paymentWorkspace.historyCard,
-    createEntrySheetsCard(bootstrapRequest),
+    entrySheets.card,
     createInviteFriendsCard(player, bootstrapRequest),
   ]);
   return wrapper;
