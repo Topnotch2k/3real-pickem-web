@@ -36,6 +36,13 @@ function formatDateTime(value, fallback = 'Not configured') {
   }).format(date);
 }
 
+function parseGameScore(input) {
+  const value = input.value.trim();
+  if (!/^\d+$/.test(value)) return null;
+  const score = Number(value);
+  return Number.isSafeInteger(score) ? score : null;
+}
+
 export function createManagerWeekView() {
   let weekData = null;
   let inFlight = false;
@@ -60,6 +67,11 @@ export function createManagerWeekView() {
     weekInput.disabled = value;
     importButton.disabled = value;
     backButton.disabled = value;
+    detailCard.querySelectorAll('button, input').forEach((control) => {
+      const resultReadOnly = control.hasAttribute('data-game-result-control') &&
+        (!weekData || !weekData.week || weekData.week.status !== 'open');
+      control.disabled = value || resultReadOnly;
+    });
   }
 
   function render() {
@@ -123,11 +135,54 @@ export function createManagerWeekView() {
         gameDetails.appendChild(createElement('dt', { text: label }));
         gameDetails.appendChild(createElement('dd', { text: value || 'Not available' }));
       });
+      const awayScoreInput = createElement('input', {
+        attributes: { name: 'awayScore', type: 'number', min: '0', step: '1', 'data-game-result-control': 'true' },
+      });
+      const homeScoreInput = createElement('input', {
+        attributes: { name: 'homeScore', type: 'number', min: '0', step: '1', 'data-game-result-control': 'true' },
+      });
+      if (game.awayScore !== '' && game.awayScore !== null && game.awayScore !== undefined) {
+        awayScoreInput.value = String(game.awayScore);
+      }
+      if (game.homeScore !== '' && game.homeScore !== null && game.homeScore !== undefined) {
+        homeScoreInput.value = String(game.homeScore);
+      }
+      const resultForm = createElement('form', { className: 'auth-form' });
+      const resultButtons = createElement('div', { className: 'button-row' });
+      const saveResultButton = createElement('button', {
+        className: 'primary-button',
+        text: 'Save Final Result',
+        attributes: { type: 'submit', 'data-game-result-control': 'true' },
+      });
+      const resultStatus = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+      const resultReadOnly = week.status !== 'open' || inFlight;
+      awayScoreInput.disabled = resultReadOnly;
+      homeScoreInput.disabled = resultReadOnly;
+      saveResultButton.disabled = resultReadOnly;
+      resultForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        saveGameResult(game, awayScoreInput, homeScoreInput, resultStatus);
+      });
+      resultButtons.appendChild(saveResultButton);
+      appendChildren(resultForm, [
+        createField(`${game.awayTeam} score`, awayScoreInput),
+        createField(`${game.homeTeam} score`, homeScoreInput),
+        resultButtons,
+        resultStatus,
+      ]);
       appendChildren(gameCard, [
         createElement('h3', { text: `${game.awayTeam} at ${game.homeTeam}` }),
         createElement('span', { className: `status-pill ${game.status === 'scheduled' ? '' : 'status-pill-muted'}`, text: game.status || 'Unknown' }),
         gameDetails,
       ]);
+      const hasSavedScores = game.status === 'final' && game.awayScore !== '' && game.homeScore !== '';
+      if (hasSavedScores) {
+        gameCard.appendChild(createElement('p', {
+          className: 'muted',
+          text: game.winnerTeam ? `Winner: ${game.winnerTeam}` : 'Result: Tie',
+        }));
+      }
+      gameCard.appendChild(resultForm);
       games.appendChild(gameCard);
     });
 
@@ -174,6 +229,40 @@ export function createManagerWeekView() {
     }
   }
 
+  async function saveGameResult(game, awayScoreInput, homeScoreInput, resultStatus) {
+    if (inFlight || !weekData || !weekData.week) return;
+    const awayScore = parseGameScore(awayScoreInput), homeScore = parseGameScore(homeScoreInput);
+    if (awayScore === null || homeScore === null) {
+      resultStatus.textContent = 'Enter nonnegative whole-number scores for both teams.';
+      resultStatus.classList.add('error-text');
+      return;
+    }
+    const correction = game.status === 'final';
+    if (!window.confirm(correction ? 'Correct this final game result?' : 'Save this game as final?')) return;
+    setInFlight(true);
+    resultStatus.textContent = correction ? 'Correcting final game result...' : 'Saving final game result...';
+    resultStatus.classList.remove('error-text');
+    message.textContent = resultStatus.textContent;
+    message.classList.remove('error-text');
+    try {
+      const result = await managerAction('manager.week.saveGameResult', {
+        weekId: weekData.week.weekId,
+        gameId: game.gameId,
+        awayScore,
+        homeScore,
+      });
+      weekData = result.data;
+      message.textContent = correction ? 'Final game result corrected.' : 'Final game result saved.';
+      render();
+    } catch (error) {
+      resultStatus.textContent = error.message;
+      resultStatus.classList.add('error-text');
+      message.textContent = error.message;
+      message.classList.add('error-text');
+    } finally {
+      setInFlight(false);
+    }
+  }
   async function archiveWeek(button) {
     if (inFlight || !weekData || !window.confirm('Archive this Week? Week and Game rows will be retained.')) return;
     setInFlight(true);
