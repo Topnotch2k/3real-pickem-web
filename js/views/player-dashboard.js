@@ -71,6 +71,17 @@ function formatSubmittedAt(value) {
   }).format(date);
 }
 
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unavailable';
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 function paymentMethodLabel(method) {
   return {
     cash: 'Cash',
