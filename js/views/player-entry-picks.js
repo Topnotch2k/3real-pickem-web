@@ -40,6 +40,7 @@ export function createPlayerEntryPicksView() {
   const entryId = entryIdFromHash();
   let state = null;
   let currentSelections = {};
+  let currentPredictedTotal = '';
   let saving = false;
   let saveBlocked = false;
   let entryAvailable = Boolean(entryId);
@@ -79,11 +80,22 @@ export function createPlayerEntryPicksView() {
       .map((game) => ({ gameId: game.gameId, selectedTeam: currentSelections[game.gameId] }));
   }
 
+  function authoritativePredictedTotal() {
+    const value = state && state.tiebreaker ? state.tiebreaker.predictedTotal : '';
+    return value === '' || value === null || value === undefined ? '' : String(value);
+  }
+
+  function dirtyPredictedTotal() {
+    if (!state || !state.tiebreaker || !state.tiebreaker.editable || !entryAvailable || saveBlocked) return false;
+    return String(currentPredictedTotal).trim() !== authoritativePredictedTotal();
+  }
+
   function updateAvailability() {
     const dirty = dirtySelections();
+    const tiebreakerDirty = dirtyPredictedTotal();
     const hasAuthoritativePicks = Boolean(state && state.picks && state.picks.length);
     const hasEditableGames = Boolean(state && (state.games || []).some((game) => game.editable));
-    save.disabled = !state || saving || saveBlocked || !entryAvailable || dirty.length === 0;
+    save.disabled = !state || saving || saveBlocked || !entryAvailable || (dirty.length === 0 && !tiebreakerDirty);
     save.textContent = saving
       ? 'Saving Picks...'
       : saveBlocked || !entryAvailable
@@ -94,6 +106,9 @@ export function createPlayerEntryPicksView() {
     content.querySelectorAll('input[type="radio"]').forEach((control) => {
       const game = (state.games || []).find((item) => item.gameId === control.dataset.gameId);
       control.disabled = saving || saveBlocked || !entryAvailable || !game || !game.editable;
+    });
+    content.querySelectorAll('input[data-tiebreaker-total="true"]').forEach((control) => {
+      control.disabled = saving || saveBlocked || !entryAvailable || !state || !state.tiebreaker || !state.tiebreaker.editable;
     });
   }
 
@@ -112,6 +127,7 @@ export function createPlayerEntryPicksView() {
     const progress = state.progress || { completed: 0, total: 0 };
     const selected = selectedByGameId();
     currentSelections = { ...selected };
+    currentPredictedTotal = authoritativePredictedTotal();
     const summary = createElement('section', { className: 'state-card compact-card' });
     const details = createElement('dl', { className: 'player-meta' });
     [
@@ -129,6 +145,36 @@ export function createPlayerEntryPicksView() {
       createElement('span', { className: `status-pill ${progress.complete ? '' : 'status-pill-muted'}`, text: progress.complete ? 'Complete' : 'In progress' }),
       details,
     ]);
+    if (state.tiebreaker) {
+      const tiebreakerField = createElement('label', { className: 'form-field' });
+      const input = createElement('input', {
+        attributes: {
+          type: 'number',
+          min: '0',
+          max: '200',
+          step: '1',
+          value: currentPredictedTotal,
+          'data-tiebreaker-total': 'true',
+        },
+      });
+      input.addEventListener('input', () => {
+        currentPredictedTotal = input.value;
+        updateAvailability();
+      });
+      appendChildren(tiebreakerField, [
+        createElement('span', { text: 'Predicted Total Points' }),
+        input,
+        createElement('small', { className: 'muted', text: `Tiebreaker: ${state.tiebreaker.awayTeam} at ${state.tiebreaker.homeTeam}` }),
+        createElement('small', { className: 'muted', text: 'Enter the combined final score for the tiebreaker game.' }),
+        createElement('small', {
+          className: 'muted',
+          text: state.tiebreaker.editable
+            ? `Locks: ${formatDateTime(state.tiebreaker.lockAt)}`
+            : `Locked: ${formatDateTime(state.tiebreaker.lockAt)}`,
+        }),
+      ]);
+      summary.appendChild(tiebreakerField);
+    }
     if (state.result) {
       const resultDetails = createElement('dl', { className: 'player-meta' });
       [
@@ -212,14 +258,15 @@ export function createPlayerEntryPicksView() {
   save.addEventListener('click', async () => {
     if (saving || saveBlocked || !state || !entryAvailable) return;
     const selections = dirtySelections();
-    if (!selections.length) return;
+    const tiebreakerDirty = dirtyPredictedTotal();
+    if (!selections.length && !tiebreakerDirty) return;
 
     saving = true;
     message.textContent = 'Saving picks...';
     message.classList.remove('error-text');
     updateAvailability();
     try {
-      const result = await playerAction('player.entry.picks.save', { entryId, selections });
+      const result = await playerAction('player.entry.picks.save', { entryId, selections, predictedTotal: currentPredictedTotal });
       state = result.data;
       renderState();
       message.textContent = `Picks saved. ${state.progress.completed} of ${state.progress.total} completed.`;
