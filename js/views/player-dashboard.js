@@ -82,6 +82,13 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+function referralStatusLabel(status) {
+  return {
+    registered: 'Registered',
+    qualified: 'Qualified',
+  }[status] || 'Registered';
+}
+
 function paymentMethodLabel(method) {
   return {
     cash: 'Cash',
@@ -92,8 +99,9 @@ function paymentMethodLabel(method) {
 
 function paymentStatusLabel(status) {
   return {
-    pending: 'Pending',
-    approved: 'Approved',
+    pending: 'Pending Review',
+    approved: 'Awaiting Payment',
+    paid: 'Paid',
     rejected: 'Rejected',
   }[status] || String(status || 'Unknown');
 }
@@ -107,14 +115,18 @@ function createClientRequestId() {
 
 function createInviteFriendsCard(player, bootstrapRequest) {
   let inviteData = null;
+  let referrals = [];
   const card = createElement('section', { className: 'state-card invite-card' });
   const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const controls = createElement('div', { className: 'button-row' });
+  const referralList = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'People you invited' } });
 
   async function loadInvite() {
     try {
       const data = await playerDashboardBootstrapSection(bootstrapRequest, 'invite');
       inviteData = data.invite;
+      const referralData = await playerDashboardBootstrapSection(bootstrapRequest, 'referrals');
+      referrals = referralData.referrals || [];
       render();
     } catch (error) {
       status.textContent = error.message;
@@ -146,6 +158,49 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     }
   }
 
+  function renderReferrals() {
+    referralList.replaceChildren();
+    referralList.appendChild(createElement('h3', { text: 'People You Invited' }));
+    if (!referrals.length) {
+      referralList.appendChild(createElement('p', { className: 'muted', text: 'Nobody has registered from your invite link yet.' }));
+      return referralList;
+    }
+    referrals.forEach((referral) => {
+      const invitee = referral.referredPlayer || {};
+      const card = createElement('article', { className: 'player-card' });
+      const header = createElement('div', { className: 'player-card-header' });
+      const avatar = createElement('span', { className: 'player-avatar', text: invitee.avatar || 'football' });
+      const title = createElement('div');
+      const pill = createElement('span', {
+        className: `status-pill ${referral.status === 'qualified' ? '' : 'status-pill-muted'}`,
+        text: referralStatusLabel(referral.status),
+      });
+      appendChildren(title, [createElement('h3', { text: invitee.displayName || 'Invited player' }), pill]);
+      appendChildren(header, [avatar, title]);
+      const details = createElement('dl', { className: 'player-meta' });
+      [
+        ['Registered', formatDateTime(referral.registeredAt)],
+      ].forEach(([label, value]) => {
+        details.appendChild(createElement('dt', { text: label }));
+        details.appendChild(createElement('dd', { text: value }));
+      });
+      if (referral.status === 'qualified' && referral.qualification) {
+        const q = referral.qualification;
+        [
+          ['Qualified', formatDateTime(referral.qualifiedAt)],
+          ['Week', q.weekId ? `Season ${q.season || 'Unknown'} · Week ${q.nflWeek || 'Unknown'}` : 'Unavailable'],
+          ['Entry', q.entryLabel || q.entryId || 'Unavailable'],
+        ].forEach(([label, value]) => {
+          details.appendChild(createElement('dt', { text: label }));
+          details.appendChild(createElement('dd', { text: value }));
+        });
+      }
+      appendChildren(card, [header, details]);
+      referralList.appendChild(card);
+    });
+    return referralList;
+  }
+
   function render() {
     card.replaceChildren();
     controls.replaceChildren();
@@ -156,6 +211,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     if (!inviteData || !inviteData.canShare || !inviteData.inviteToken) {
       card.appendChild(createElement('p', { className: 'muted', text: 'Invites are currently closed.' }));
       card.appendChild(status);
+      card.appendChild(renderReferrals());
       return;
     }
     const link = inviteLink();
@@ -168,6 +224,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     appendChildren(controls, [share, copy]);
     card.appendChild(controls);
     card.appendChild(status);
+    card.appendChild(renderReferrals());
   }
 
   render();
@@ -217,11 +274,11 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
   });
   const historyList = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Payment requests' } });
 
-  function pendingForCurrentWeek() {
+  function activeRequestForCurrentWeek() {
     if (!paymentOptions || !paymentOptions.week) {
       return null;
     }
-    return payments.find((payment) => payment.status === 'pending' && payment.weekId === paymentOptions.week.weekId) || null;
+    return payments.find((payment) => ['pending', 'approved', 'paid'].indexOf(payment.status) !== -1 && payment.weekId === paymentOptions.week.weekId) || null;
   }
 
   function updateTotal() {
@@ -236,13 +293,13 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
   }
 
   function updateFormAvailability() {
-    const pending = pendingForCurrentWeek();
-    const disabled = !paymentOptions || !paymentsLoaded || submitting || Boolean(pending);
+    const activeRequest = activeRequestForCurrentWeek();
+    const disabled = !paymentOptions || !paymentsLoaded || submitting || Boolean(activeRequest);
     methodSelect.disabled = disabled;
     quantitySelect.disabled = disabled;
     submit.disabled = disabled;
-    pendingNotice.textContent = pending
-      ? 'You already have a pending payment request for this week. Wait for the manager to approve or reject it before submitting another one.'
+    pendingNotice.textContent = activeRequest
+      ? 'You already have a payment request for this week. Wait for the manager to reject it before submitting another one.'
       : '';
   }
 
@@ -301,7 +358,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
       }
       appendChildren(card, [
         createElement('span', {
-          className: `status-pill ${payment.status === 'approved' ? '' : 'status-pill-muted'}`,
+          className: `status-pill ${payment.status === 'paid' ? '' : 'status-pill-muted'}`,
           text: paymentStatusLabel(payment.status),
         }),
         details,
@@ -345,14 +402,14 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
           ? await playerDashboardBootstrapSection(initialBootstrapRequest, 'payments')
           : (await playerAction('player.payments.list')).data;
         const nextPayments = data.payments || [];
-        const approvedPaymentReceived = payments.some((payment) => payment.status === 'pending' &&
-          nextPayments.some((nextPayment) => nextPayment.paymentId === payment.paymentId && nextPayment.status === 'approved'));
+        const paidPaymentReceived = payments.some((payment) => payment.status !== 'paid' &&
+          nextPayments.some((nextPayment) => nextPayment.paymentId === payment.paymentId && nextPayment.status === 'paid'));
         payments = nextPayments;
         paymentsLoaded = true;
         historyStatus.classList.remove('error-text');
         renderHistory();
         updateFormAvailability();
-        if (approvedPaymentReceived) {
+        if (paidPaymentReceived) {
           entrySheets.refresh();
         }
       } catch (error) {
@@ -458,7 +515,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (submitting || !paymentOptions || pendingForCurrentWeek()) {
+    if (submitting || !paymentOptions || activeRequestForCurrentWeek()) {
       return;
     }
     const method = methodSelect.value;
@@ -483,7 +540,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
         renderHistory();
       }
       clearLogicalRequest();
-      message.textContent = 'Payment request submitted. The manager must verify and approve it before your entries are created.';
+      message.textContent = 'Payment request submitted. The manager must approve it and mark it paid before your entries are created.';
       await loadPayments();
     } catch (error) {
       message.textContent = error.message;
@@ -512,7 +569,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
     createElement('h2', { text: 'Payment Request' }),
     createElement('p', {
       className: 'muted',
-      text: 'Choose how you will pay the manager. Cash, Cash App, and Apple Pay are verified outside the app. Your entries are created only after the manager approves the payment.',
+      text: 'Choose how you will pay the manager. Cash, Cash App, and Apple Pay are verified outside the app. Your entries are created only after the manager marks the approved payment paid.',
     }),
     form,
   ]);

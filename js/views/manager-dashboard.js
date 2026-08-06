@@ -28,6 +28,24 @@ function managerAction(action, payload = {}) {
   return requestAction(action, { ...payload, sessionToken: getManagerSessionToken() });
 }
 
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unavailable';
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function referralStatusLabel(status) {
+  return {
+    registered: 'Registered',
+    qualified: 'Qualified',
+  }[status] || 'Registered';
+}
+
 function createInviteCard() {
   let inviteData = null;
   const card = createElement('section', { className: 'state-card invite-card' });
@@ -142,6 +160,87 @@ function createInviteCard() {
   return card;
 }
 
+function createReferralsCard() {
+  let referrals = [];
+  const card = createElement('section', { className: 'state-card' });
+  const status = createElement('p', {
+    className: 'muted',
+    text: 'Loading referrals...',
+    attributes: { role: 'status', 'aria-live': 'polite' },
+  });
+  const list = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Referrals' } });
+
+  function render() {
+    list.replaceChildren();
+    if (!referrals.length) {
+      list.appendChild(createElement('p', { className: 'muted', text: 'No referrals yet.' }));
+      return;
+    }
+    referrals.forEach((referral) => {
+      const referrer = referral.referrer || {};
+      const invitee = referral.referredPlayer || {};
+      const referralCard = createElement('article', { className: 'player-card' });
+      const header = createElement('div', { className: 'player-card-header' });
+      const avatar = createElement('span', { className: 'player-avatar', text: invitee.avatar || 'football' });
+      const title = createElement('div');
+      const pill = createElement('span', {
+        className: `status-pill ${referral.status === 'qualified' ? '' : 'status-pill-muted'}`,
+        text: referralStatusLabel(referral.status),
+      });
+      appendChildren(title, [createElement('h3', { text: invitee.displayName || 'Invited player' }), pill]);
+      appendChildren(header, [avatar, title]);
+      const details = createElement('dl', { className: 'player-meta' });
+      [
+        ['Invited by', referrer.displayName || 'Unknown player'],
+        ['Registered', formatDateTime(referral.registeredAt)],
+      ].forEach(([label, value]) => {
+        details.appendChild(createElement('dt', { text: label }));
+        details.appendChild(createElement('dd', { text: value }));
+      });
+      if (referral.status === 'qualified' && referral.qualification) {
+        const q = referral.qualification;
+        [
+          ['Qualified', formatDateTime(referral.qualifiedAt)],
+          ['Week', q.weekId ? `Season ${q.season || 'Unknown'} · Week ${q.nflWeek || 'Unknown'}` : 'Unavailable'],
+          ['Entry', q.entryLabel || q.entryId || 'Unavailable'],
+        ].forEach(([label, value]) => {
+          details.appendChild(createElement('dt', { text: label }));
+          details.appendChild(createElement('dd', { text: value }));
+        });
+      }
+      appendChildren(referralCard, [header, details]);
+      list.appendChild(referralCard);
+    });
+  }
+
+  async function loadReferrals() {
+    try {
+      const result = await managerAction('manager.referrals.list');
+      if (!card.isConnected) {
+        return;
+      }
+      referrals = result.data.referrals || [];
+      status.textContent = referrals.length ? `${referrals.length} referral${referrals.length === 1 ? '' : 's'} found.` : '';
+      status.classList.remove('error-text');
+      render();
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    }
+  }
+
+  appendChildren(card, [
+    createElement('p', { className: 'eyebrow', text: 'Referrals' }),
+    createElement('h2', { text: 'Referrals' }),
+    createElement('p', { className: 'muted', text: 'See who invited whom and whether each referral has qualified.' }),
+    status,
+    list,
+  ]);
+  render();
+  loadReferrals();
+  return card;
+}
+
 export function createManagerDashboardView(context = {}) {
   const manager = context.manager || {};
   const wrapper = createElement('main', { className: 'page-container' });
@@ -237,6 +336,7 @@ export function createManagerDashboardView(context = {}) {
   ]);
   wrapper.appendChild(card);
   wrapper.appendChild(createInviteCard());
+  wrapper.appendChild(createReferralsCard());
   window.setTimeout(pollPendingPayments, 0);
   return wrapper;
 }
