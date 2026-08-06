@@ -122,6 +122,96 @@ export function createPlayerEntryPicksView() {
     return savedPick === game.winnerTeam ? 'Correct' : 'Incorrect';
   }
 
+  function createPickControls(game, selected) {
+    const fieldset = createElement('fieldset', { className: 'pick-team-fieldset' });
+    const legend = createElement('legend', { text: `${game.awayTeam} at ${game.homeTeam}` });
+    fieldset.appendChild(legend);
+    const choices = createElement('div', { className: 'pick-team-options' });
+    [game.awayTeam, game.homeTeam].forEach((team) => {
+      const controlId = `pick-${game.gameId}-${team}`.replace(/[^A-Za-z0-9_-]/g, '-');
+      const input = createElement('input', {
+        attributes: {
+          type: 'radio',
+          id: controlId,
+          name: `pick-${game.gameId}`,
+          value: team,
+        },
+      });
+      input.dataset.gameId = game.gameId;
+      if (selected[game.gameId] === team) input.checked = true;
+      input.addEventListener('change', () => {
+        currentSelections[game.gameId] = team;
+        updateAvailability();
+      });
+      const label = createElement('label', { className: 'pick-team-choice', attributes: { for: controlId } });
+      appendChildren(label, [input, createElement('span', { text: team })]);
+      choices.appendChild(label);
+    });
+    fieldset.appendChild(choices);
+    return fieldset;
+  }
+
+  function gameDetailLines(game, selected) {
+    const savedPick = selected[game.gameId] || '';
+    const finalResultLines = game.status === 'final'
+      ? [
+          createElement('p', { className: 'muted', text: `Your pick: ${savedPick || 'No pick'}` }),
+          createElement('span', { className: 'status-pill', text: gamePickResult(game, savedPick) }),
+        ]
+      : [];
+    return [
+      createElement('span', { className: `status-pill ${game.editable ? '' : 'status-pill-muted'}`, text: game.editable ? 'Editable' : 'Locked' }),
+      createElement('p', { className: 'muted', text: `Kickoff: ${formatDateTime(game.kickoffAt)}` }),
+      createElement('p', { className: 'muted', text: `Locks: ${formatDateTime(game.lockAt)}` }),
+      ...(game.awayScore !== '' && game.homeScore !== '' ? [createElement('p', {
+        className: 'muted',
+        text: `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}${game.winnerTeam ? ` - Winner: ${game.winnerTeam}` : ' - Tie'}`,
+      })] : []),
+      ...finalResultLines,
+    ];
+  }
+
+  function createGameCard(game, selected) {
+    const card = createElement('article', { className: 'player-card pick-game-card' });
+    appendChildren(card, [
+      ...gameDetailLines(game, selected),
+      createPickControls(game, selected),
+    ]);
+    return card;
+  }
+
+  function createTiebreakerCard(game, selected) {
+    const card = createElement('article', { className: 'player-card pick-game-card tiebreaker-panel' });
+    const tiebreakerField = createElement('label', { className: 'form-field tiebreaker-total-field' });
+    const input = createElement('input', {
+      attributes: {
+        type: 'number',
+        min: '0',
+        max: '200',
+        step: '1',
+        value: currentPredictedTotal,
+        'data-tiebreaker-total': 'true',
+      },
+    });
+    input.addEventListener('input', () => {
+      currentPredictedTotal = input.value;
+      updateAvailability();
+    });
+    appendChildren(tiebreakerField, [
+      createElement('span', { text: 'Predicted Total Points' }),
+      input,
+      createElement('small', { className: 'muted', text: 'Enter the combined final score for the tiebreaker game.' }),
+    ]);
+    appendChildren(card, [
+      createElement('p', { className: 'eyebrow', text: 'Tiebreaker' }),
+      createElement('h3', { className: 'tiebreaker-matchup', text: `${game.awayTeam} at ${game.homeTeam}` }),
+      ...gameDetailLines(game, selected),
+      createPickControls(game, selected),
+      tiebreakerField,
+    ]);
+    return card;
+  }
+
   function renderState() {
     content.replaceChildren();
     if (!state) {
@@ -150,41 +240,6 @@ export function createPlayerEntryPicksView() {
       createElement('span', { className: `status-pill ${progress.complete ? '' : 'status-pill-muted'}`, text: progress.complete ? 'Complete' : 'In progress' }),
       details,
     ]);
-    if (state.tiebreaker) {
-      const tiebreakerSection = createElement('section', { className: 'tiebreaker-panel' });
-      const tiebreakerField = createElement('label', { className: 'form-field tiebreaker-total-field' });
-      const input = createElement('input', {
-        attributes: {
-          type: 'number',
-          min: '0',
-          max: '200',
-          step: '1',
-          value: currentPredictedTotal,
-          'data-tiebreaker-total': 'true',
-        },
-      });
-      input.addEventListener('input', () => {
-        currentPredictedTotal = input.value;
-        updateAvailability();
-      });
-      appendChildren(tiebreakerField, [
-        createElement('span', { text: 'Predicted Total Points' }),
-        input,
-        createElement('small', { className: 'muted', text: 'Enter the combined final score for the tiebreaker game.' }),
-        createElement('small', {
-          className: 'muted',
-          text: state.tiebreaker.editable
-            ? `Locks: ${formatDateTime(state.tiebreaker.lockAt)}`
-            : `Locked: ${formatDateTime(state.tiebreaker.lockAt)}`,
-        }),
-      ]);
-      appendChildren(tiebreakerSection, [
-        createElement('p', { className: 'eyebrow', text: 'Tiebreaker' }),
-        createElement('h3', { className: 'tiebreaker-matchup', text: `${state.tiebreaker.awayTeam} at ${state.tiebreaker.homeTeam}` }),
-        tiebreakerField,
-      ]);
-      summary.appendChild(tiebreakerSection);
-    }
     if (state.result) {
       const resultDetails = createElement('dl', { className: 'player-meta' });
       [
@@ -203,53 +258,19 @@ export function createPlayerEntryPicksView() {
     }
     content.appendChild(summary);
 
-    (state.games || []).forEach((game) => {
-      const card = createElement('article', { className: 'player-card pick-game-card' });
-      const fieldset = createElement('fieldset', { className: 'pick-team-fieldset' });
-      const legend = createElement('legend', { text: `${game.awayTeam} at ${game.homeTeam}` });
-      fieldset.appendChild(legend);
-      const choices = createElement('div', { className: 'pick-team-options' });
-      [game.awayTeam, game.homeTeam].forEach((team) => {
-        const controlId = `pick-${game.gameId}-${team}`.replace(/[^A-Za-z0-9_-]/g, '-');
-        const input = createElement('input', {
-          attributes: {
-            type: 'radio',
-            id: controlId,
-            name: `pick-${game.gameId}`,
-            value: team,
-          },
-        });
-        input.dataset.gameId = game.gameId;
-        if (selected[game.gameId] === team) input.checked = true;
-        input.addEventListener('change', () => {
-          currentSelections[game.gameId] = team;
-          updateAvailability();
-        });
-        const label = createElement('label', { className: 'pick-team-choice', attributes: { for: controlId } });
-        appendChildren(label, [input, createElement('span', { text: team })]);
-        choices.appendChild(label);
-      });
-      fieldset.appendChild(choices);
-      const savedPick = selected[game.gameId] || '';
-      const finalResultLines = game.status === 'final'
-        ? [
-            createElement('p', { className: 'muted', text: `Your pick: ${savedPick || 'No pick'}` }),
-            createElement('span', { className: 'status-pill', text: gamePickResult(game, savedPick) }),
-          ]
-        : [];
-      appendChildren(card, [
-        createElement('span', { className: `status-pill ${game.editable ? '' : 'status-pill-muted'}`, text: game.editable ? 'Editable' : 'Locked' }),
-        createElement('p', { className: 'muted', text: `Kickoff: ${formatDateTime(game.kickoffAt)}` }),
-        createElement('p', { className: 'muted', text: `Locks: ${formatDateTime(game.lockAt)}` }),
-        ...(game.awayScore !== '' && game.homeScore !== '' ? [createElement('p', {
-          className: 'muted',
-          text: `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}${game.winnerTeam ? ` - Winner: ${game.winnerTeam}` : ' - Tie'}`,
-        })] : []),
-        ...finalResultLines,
-        fieldset,
-      ]);
-      content.appendChild(card);
-    });
+    const tiebreakerGameId = state.tiebreaker ? state.tiebreaker.gameId : '';
+    const tiebreakerGame = (state.games || []).find((game) => game.gameId === tiebreakerGameId);
+    if (tiebreakerGameId && !tiebreakerGame) {
+      saveBlocked = true;
+      message.textContent = 'Tiebreaker game is unavailable. Return to the dashboard before trying again.';
+      message.classList.add('error-text');
+      updateAvailability();
+      return;
+    }
+    (state.games || [])
+      .filter((game) => game.gameId !== tiebreakerGameId)
+      .forEach((game) => content.appendChild(createGameCard(game, selected)));
+    if (tiebreakerGame) content.appendChild(createTiebreakerCard(tiebreakerGame, selected));
     updateAvailability();
   }
 
