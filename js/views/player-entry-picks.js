@@ -97,6 +97,12 @@ export function createPlayerEntryPicksView() {
     });
   }
 
+  function gamePickResult(game, savedPick) {
+    if (!savedPick) return 'No pick';
+    if (!game.winnerTeam) return 'Tie';
+    return savedPick === game.winnerTeam ? 'Correct' : 'Incorrect';
+  }
+
   function renderState() {
     content.replaceChildren();
     if (!state) {
@@ -123,6 +129,22 @@ export function createPlayerEntryPicksView() {
       createElement('span', { className: `status-pill ${progress.complete ? '' : 'status-pill-muted'}`, text: progress.complete ? 'Complete' : 'In progress' }),
       details,
     ]);
+    if (state.result) {
+      const resultDetails = createElement('dl', { className: 'player-meta' });
+      [
+        ['Correct picks', `${state.result.regularPoints} of ${state.result.totalGames}`],
+        ['Rank', String(state.result.rank)],
+        ['Graded', formatDateTime(state.result.gradedAt)],
+      ].forEach(([label, value]) => {
+        resultDetails.appendChild(createElement('dt', { text: label }));
+        resultDetails.appendChild(createElement('dd', { text: value }));
+      });
+      appendChildren(summary, [
+        createElement('h3', { text: 'Results' }),
+        createElement('span', { className: 'status-pill', text: `${state.result.regularPoints} of ${state.result.totalGames}` }),
+        resultDetails,
+      ]);
+    }
     content.appendChild(summary);
 
     (state.games || []).forEach((game) => {
@@ -152,10 +174,22 @@ export function createPlayerEntryPicksView() {
         choices.appendChild(label);
       });
       fieldset.appendChild(choices);
+      const savedPick = selected[game.gameId] || '';
+      const finalResultLines = game.status === 'final'
+        ? [
+            createElement('p', { className: 'muted', text: `Your pick: ${savedPick || 'No pick'}` }),
+            createElement('span', { className: 'status-pill', text: gamePickResult(game, savedPick) }),
+          ]
+        : [];
       appendChildren(card, [
         createElement('span', { className: `status-pill ${game.editable ? '' : 'status-pill-muted'}`, text: game.editable ? 'Editable' : 'Locked' }),
         createElement('p', { className: 'muted', text: `Kickoff: ${formatDateTime(game.kickoffAt)}` }),
         createElement('p', { className: 'muted', text: `Locks: ${formatDateTime(game.lockAt)}` }),
+        ...(game.awayScore !== '' && game.homeScore !== '' ? [createElement('p', {
+          className: 'muted',
+          text: `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}${game.winnerTeam ? ` - Winner: ${game.winnerTeam}` : ' - Tie'}`,
+        })] : []),
+        ...finalResultLines,
         fieldset,
       ]);
       content.appendChild(card);
