@@ -46,6 +46,13 @@ function referralStatusLabel(status) {
   }[status] || 'Registered';
 }
 
+function referralBadgeLabel(badge) {
+  return {
+    football: 'Football',
+    crown: 'Crown',
+  }[badge] || 'None';
+}
+
 function createInviteCard() {
   let inviteData = null;
   const card = createElement('section', { className: 'state-card invite-card' });
@@ -162,6 +169,7 @@ function createInviteCard() {
 
 function createReferralsCard() {
   let referrals = [];
+  let rewardSummaries = [];
   const card = createElement('section', { className: 'state-card' });
   const status = createElement('p', {
     className: 'muted',
@@ -172,6 +180,31 @@ function createReferralsCard() {
 
   function render() {
     list.replaceChildren();
+    if (rewardSummaries.length) {
+      list.appendChild(createElement('h3', { text: 'Referral Reward Progress' }));
+      rewardSummaries.forEach((item) => {
+        const referrer = item.referrer || {};
+        const summary = item.rewardSummary || {};
+        const summaryCard = createElement('article', { className: 'player-card' });
+        const details = createElement('dl', { className: 'player-meta' });
+        [
+          ['Qualified referrals', String(summary.qualifiedReferralCount || 0)],
+          ['Free entries earned', String(summary.earnedFreeEntries || 0)],
+          ['Unused free-entry balance', String(summary.unusedFreeEntries || 0)],
+          ['Current badge', referralBadgeLabel(summary.currentBadge)],
+          ['Next milestone', summary.nextMilestone ? `${summary.nextMilestone} qualified referrals` : 'All milestones earned'],
+        ].forEach(([label, value]) => {
+          details.appendChild(createElement('dt', { text: label }));
+          details.appendChild(createElement('dd', { text: value }));
+        });
+        appendChildren(summaryCard, [
+          createElement('h3', { text: referrer.displayName || 'Referring player' }),
+          details,
+        ]);
+        list.appendChild(summaryCard);
+      });
+      list.appendChild(createElement('h3', { text: 'Referral Activity' }));
+    }
     if (!referrals.length) {
       list.appendChild(createElement('p', { className: 'muted', text: 'No referrals yet.' }));
       return;
@@ -220,6 +253,7 @@ function createReferralsCard() {
         return;
       }
       referrals = result.data.referrals || [];
+      rewardSummaries = result.data.rewardSummaries || [];
       status.textContent = referrals.length ? `${referrals.length} referral${referrals.length === 1 ? '' : 's'} found.` : '';
       status.classList.remove('error-text');
       render();

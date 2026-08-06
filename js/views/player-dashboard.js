@@ -89,6 +89,13 @@ function referralStatusLabel(status) {
   }[status] || 'Registered';
 }
 
+function referralBadgeLabel(badge) {
+  return {
+    football: 'Football',
+    crown: 'Crown',
+  }[badge] || 'None';
+}
+
 function paymentMethodLabel(method) {
   return {
     cash: 'Cash',
@@ -116,6 +123,14 @@ function createClientRequestId() {
 function createInviteFriendsCard(player, bootstrapRequest) {
   let inviteData = null;
   let referrals = [];
+  let rewardSummary = {
+    qualifiedReferralCount: 0,
+    earnedFreeEntries: 0,
+    usedFreeEntries: 0,
+    unusedFreeEntries: 0,
+    currentBadge: '',
+    nextMilestone: 10,
+  };
   const card = createElement('section', { className: 'state-card invite-card' });
   const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const controls = createElement('div', { className: 'button-row' });
@@ -127,6 +142,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
       inviteData = data.invite;
       const referralData = await playerDashboardBootstrapSection(bootstrapRequest, 'referrals');
       referrals = referralData.referrals || [];
+      rewardSummary = referralData.rewardSummary || rewardSummary;
       render();
     } catch (error) {
       status.textContent = error.message;
@@ -201,6 +217,32 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     return referralList;
   }
 
+  function renderRewardSummary() {
+    const section = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Referral reward progress' } });
+    const summaryCard = createElement('article', { className: 'player-card' });
+    const details = createElement('dl', { className: 'player-meta' });
+    [
+      ['Qualified referrals', String(rewardSummary.qualifiedReferralCount || 0)],
+      ['Free entries earned', String(rewardSummary.earnedFreeEntries || 0)],
+      ['Unused free-entry balance', String(rewardSummary.unusedFreeEntries || 0)],
+      ['Current badge', referralBadgeLabel(rewardSummary.currentBadge)],
+      ['Next milestone', rewardSummary.nextMilestone ? `${rewardSummary.nextMilestone} qualified referrals` : 'All milestones earned'],
+    ].forEach(([label, value]) => {
+      details.appendChild(createElement('dt', { text: label }));
+      details.appendChild(createElement('dd', { text: value }));
+    });
+    appendChildren(summaryCard, [
+      createElement('h3', { text: 'EARN UP TO 6 FREE ENTRIES' }),
+      createElement('p', { className: 'muted', text: '10 qualified referrals — 1 free entry' }),
+      createElement('p', { className: 'muted', text: '20 qualified referrals — 2 more free entries' }),
+      createElement('p', { className: 'muted', text: '25 qualified referrals — football badge' }),
+      createElement('p', { className: 'muted', text: '50 qualified referrals — 3 more free entries and crown badge' }),
+      details,
+    ]);
+    section.appendChild(summaryCard);
+    return section;
+  }
+
   function render() {
     card.replaceChildren();
     controls.replaceChildren();
@@ -210,6 +252,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     ]);
     if (!inviteData || !inviteData.canShare || !inviteData.inviteToken) {
       card.appendChild(createElement('p', { className: 'muted', text: 'Invites are currently closed.' }));
+      card.appendChild(renderRewardSummary());
       card.appendChild(status);
       card.appendChild(renderReferrals());
       return;
@@ -223,6 +266,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     copy.addEventListener('click', copyLink);
     appendChildren(controls, [share, copy]);
     card.appendChild(controls);
+    card.appendChild(renderRewardSummary());
     card.appendChild(status);
     card.appendChild(renderReferrals());
   }
