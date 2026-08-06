@@ -396,6 +396,95 @@ h1 {
   -webkit-overflow-scrolling: touch;
 }
 
+.league-leaders-grid {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.league-leader-card {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid rgba(217, 173, 50, 0.34);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.league-leader-card h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.league-leader-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.league-leader-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.leaderboard-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.leaderboard-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.leaderboard-table {
+  width: 100%;
+  min-width: 42rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  border-bottom: 1px solid rgba(217, 173, 50, 0.2);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+}
+
+.leaderboard-table th {
+  color: var(--color-gold-soft);
+  font-weight: 900;
+}
+
+.leaderboard-table small,
+.leaderboard-table span {
+  display: block;
+}
+
+.leaderboard-table .status-pill {
+  display: inline-flex;
+  margin-top: var(--space-1);
+}
+
+@media (min-width: 42rem) {
+  .league-leaders-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .league-leaders-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .picks-board-table {
   width: max-content;
   min-width: 100%;

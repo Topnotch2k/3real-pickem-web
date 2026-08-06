@@ -47,6 +47,17 @@ function displayValue(value) {
   return value === '' || value === null || value === undefined ? '-' : String(value);
 }
 
+function plural(value, singular, pluralText) {
+  return Number(value) === 1 ? singular : pluralText;
+}
+
+function formatPercent(value) {
+  if (value === '' || value === null || value === undefined) return '-';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return displayValue(value);
+  return `${Number.isInteger(number) ? number : Number(number.toFixed(2))}%`;
+}
+
 function gameIsFinal(game) {
   return String(game && game.status || '').toLowerCase() === 'final';
 }
@@ -150,10 +161,161 @@ function renderBoardNotice(text) {
   return boardCard;
 }
 
+function renderLeaderCategory(title, rows, value) {
+  const card = createElement('article', { className: 'league-leader-card' });
+  card.appendChild(createElement('h3', { text: title }));
+  const list = createElement('ol', { className: 'league-leader-list' });
+  (Array.isArray(rows) ? rows.slice(0, 3) : []).forEach((leader, index) => {
+    const item = createElement('li');
+    appendChildren(item, [
+      createElement('span', { text: `${index + 1}. ${leader.playerName || 'Unknown player'}` }),
+      createElement('span', { className: 'muted', text: value(leader) }),
+    ]);
+    list.appendChild(item);
+  });
+  if (!list.children.length) list.appendChild(createElement('li', { className: 'muted', text: 'No leader yet' }));
+  card.appendChild(list);
+  return card;
+}
+
+function renderLeagueLeaders(data) {
+  const section = createElement('section', { className: 'state-card' });
+  appendChildren(section, [
+    createElement('p', { className: 'eyebrow', text: 'Main Event' }),
+    createElement('h2', { text: 'League Leaders' }),
+  ]);
+  const leaders = data && data.leaders ? data.leaders : {};
+  const grid = createElement('div', { className: 'league-leaders-grid' });
+  appendChildren(grid, [
+    renderLeaderCategory('👑 Most Wins', leaders.mostWins, (leader) => `${displayValue(leader.weeklyWins)} ${plural(leader.weeklyWins, 'win', 'wins')}`),
+    renderLeaderCategory('🎯 Best Accuracy', leaders.bestAccuracy, (leader) => formatPercent(leader.accuracy)),
+    renderLeaderCategory('🔥 Best Streak', leaders.bestStreak, (leader) => `${displayValue(leader.longestStreak)} ${plural(leader.longestStreak, 'week', 'weeks')}`),
+    renderLeaderCategory('🤝 Top Recruiter', leaders.topRecruiter, (leader) => `${displayValue(leader.qualifiedReferralCount)} ${plural(leader.qualifiedReferralCount, 'recruit', 'recruits')}`),
+  ]);
+  section.appendChild(grid);
+  return section;
+}
+
+function renderWinnerPill(standing) {
+  return standing.isWeeklyWinner === true ? createElement('span', { className: 'status-pill', text: 'Winner' }) : null;
+}
+
+function renderLeaderboardTable(columns, rows, cellRenderers) {
+  const scroll = createElement('div', { className: 'leaderboard-scroll' });
+  const table = createElement('table', { className: 'leaderboard-table' });
+  const thead = createElement('thead');
+  const headRow = createElement('tr');
+  columns.forEach((column) => headRow.appendChild(createElement('th', { text: column, attributes: { scope: 'col' } })));
+  thead.appendChild(headRow);
+  const tbody = createElement('tbody');
+  rows.forEach((row) => {
+    const tr = createElement('tr');
+    cellRenderers.forEach((renderCell, index) => {
+      const cell = createElement(index === 0 ? 'th' : 'td', { attributes: index === 0 ? { scope: 'row' } : {} });
+      const content = renderCell(row);
+      if (Array.isArray(content)) appendChildren(cell, content.filter(Boolean));
+      else cell.textContent = content;
+      tr.appendChild(cell);
+    });
+    tbody.appendChild(tr);
+  });
+  appendChildren(table, [thead, tbody]);
+  scroll.appendChild(table);
+  return scroll;
+}
+
+function renderWeeklyLeaderboard(weekly) {
+  if (!weekly || weekly.graded === false) return createElement('p', { className: 'muted', text: 'Leaderboard appears after the Week is graded.' });
+  const standings = Array.isArray(weekly.standings) ? weekly.standings : [];
+  if (!standings.length) return createElement('p', { className: 'muted', text: 'No graded entries for this Week.' });
+  return renderLeaderboardTable(
+    ['#', 'Player / Entry', 'Correct', 'Points Away'],
+    standings,
+    [
+      (standing) => displayValue(standing.position),
+      (standing) => [
+        createElement('span', { text: standing.playerName || 'Unknown player' }),
+        createElement('small', { className: 'muted', text: standing.entryLabel || standing.entryId || 'Entry' }),
+        renderWinnerPill(standing),
+      ],
+      (standing) => displayValue(standing.correctPicks),
+      (standing) => displayValue(standing.pointsAway),
+    ],
+  );
+}
+
+function renderSeasonLeaderboard(season) {
+  const standings = season && Array.isArray(season.standings) ? season.standings : [];
+  const fragment = document.createDocumentFragment();
+  if (season && season.season) fragment.appendChild(createElement('p', { className: 'muted', text: `Season ${season.season}` }));
+  if (!standings.length) {
+    fragment.appendChild(createElement('p', { className: 'muted', text: 'No season results yet.' }));
+    return fragment;
+  }
+  fragment.appendChild(renderLeaderboardTable(
+    ['#', 'Player', 'Correct', 'Accuracy', 'Wins', 'Best Week', 'Weeks Played'],
+    standings,
+    [
+      (standing) => displayValue(standing.position),
+      (standing) => displayValue(standing.playerName),
+      (standing) => displayValue(standing.totalCorrect),
+      (standing) => formatPercent(standing.accuracy),
+      (standing) => displayValue(standing.weeklyWins),
+      (standing) => displayValue(standing.bestWeek),
+      (standing) => displayValue(standing.gradedWeeksPlayed),
+    ],
+  ));
+  return fragment;
+}
+
+function renderAllTimeLeaderboard(allTime) {
+  const standings = allTime && Array.isArray(allTime.standings) ? allTime.standings : [];
+  if (!standings.length) return createElement('p', { className: 'muted', text: 'No all-time results yet.' });
+  return renderLeaderboardTable(
+    ['#', 'Player', 'Wins', 'Accuracy', 'Correct', 'Best Week', 'Weeks Played'],
+    standings,
+    [
+      (standing) => displayValue(standing.position),
+      (standing) => displayValue(standing.playerName),
+      (standing) => displayValue(standing.weeklyWins),
+      (standing) => formatPercent(standing.accuracy),
+      (standing) => displayValue(standing.totalCorrect),
+      (standing) => displayValue(standing.bestWeek),
+      (standing) => displayValue(standing.gradedWeeksPlayed),
+    ],
+  );
+}
+
+function renderLeaderboard(data, activeTab, setActiveTab) {
+  const section = createElement('section', { className: 'state-card leaderboard-section' });
+  appendChildren(section, [createElement('h2', { text: 'Leaderboard' })]);
+  const tabs = createElement('div', { className: 'button-row leaderboard-tabs' });
+  [
+    ['weekly', 'This Week'],
+    ['season', 'Season'],
+    ['allTime', 'All-Time'],
+  ].forEach(([tab, label]) => {
+    const button = createElement('button', {
+      className: activeTab === tab ? 'primary-button' : 'secondary-button',
+      text: label,
+      attributes: { type: 'button' },
+    });
+    button.addEventListener('click', () => setActiveTab(tab));
+    tabs.appendChild(button);
+  });
+  section.appendChild(tabs);
+  const leaderboards = data && data.leaderboards ? data.leaderboards : {};
+  if (activeTab === 'season') section.appendChild(renderSeasonLeaderboard(leaderboards.season));
+  else if (activeTab === 'allTime') section.appendChild(renderAllTimeLeaderboard(leaderboards.allTime));
+  else section.appendChild(renderWeeklyLeaderboard(leaderboards.weekly));
+  return section;
+}
+
 export function createEverybodysPicksView({ actor = 'player' } = {}) {
   const config = actorConfig(actor);
   let boardData = null;
   let loadVersion = 0;
+  let activeLeaderboardTab = 'weekly';
   const wrapper = createElement('main', { className: 'page-container' });
   const header = createElement('section', { className: 'state-card manager-toolbar' });
   const controls = createElement('div', { className: 'manager-controls' });
@@ -164,6 +326,8 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     text: 'Loading Everybody\'s Picks...',
     attributes: { role: 'status', 'aria-live': 'polite' },
   });
+  const leadersRegion = createElement('section');
+  const leaderboardRegion = createElement('section');
   const boardRegion = createElement('section');
 
   function actionPayload(weekId = '') {
@@ -183,6 +347,11 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
 
   function render() {
     renderWeekOptions();
+    leadersRegion.replaceChildren(renderLeagueLeaders(boardData || {}));
+    leaderboardRegion.replaceChildren(renderLeaderboard(boardData || {}, activeLeaderboardTab, (tab) => {
+      activeLeaderboardTab = tab;
+      if (wrapper.isConnected) render();
+    }));
     boardRegion.replaceChildren(renderBoard(boardData || { availableWeeks: [], week: null, rows: [] }));
   }
 
@@ -191,17 +360,22 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     message.textContent = 'Loading Everybody\'s Picks...';
     message.classList.remove('error-text');
     weekSelect.disabled = true;
+    leadersRegion.replaceChildren(renderBoardNotice('Loading Everybody\'s Picks...'));
+    leaderboardRegion.replaceChildren();
     boardRegion.replaceChildren(renderBoardNotice('Loading Everybody\'s Picks...'));
     try {
       const result = await requestAction(config.action, actionPayload(weekId));
       if (currentVersion !== loadVersion || !wrapper.isConnected) return;
       boardData = result.data || {};
+      activeLeaderboardTab = 'weekly';
       message.textContent = '';
       message.classList.remove('error-text');
       render();
     } catch (error) {
       if (currentVersion !== loadVersion || !wrapper.isConnected) return;
       renderWeekOptions();
+      leadersRegion.replaceChildren(renderBoardNotice('Unable to load Everybody\'s Picks.'));
+      leaderboardRegion.replaceChildren();
       boardRegion.replaceChildren(renderBoardNotice('Unable to load Everybody\'s Picks.'));
       message.textContent = error.message;
       message.classList.add('error-text');
@@ -223,7 +397,7 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     controls,
     message,
   ]);
-  appendChildren(wrapper, [header, boardRegion]);
+  appendChildren(wrapper, [header, leadersRegion, leaderboardRegion, boardRegion]);
   loadBoard();
   return wrapper;
 }
