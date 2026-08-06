@@ -622,7 +622,7 @@ function createEntrySheetsCard(bootstrapRequest) {
             const entryCard = createElement('article', { className: 'player-card' });
             const details = createElement('dl', { className: 'player-meta' });
             [
-              ['Week', `Season ${entry.week.season} Â· Week ${entry.week.nflWeek}`],
+              ['Week', `Season ${entry.week.season} - Week ${entry.week.nflWeek}`],
               ['Score', `${entry.result.regularPoints} of ${entry.result.totalGames}`],
               ['Rank', String(entry.result.rank)],
               ['Graded', formatDateTime(entry.result.gradedAt)],
