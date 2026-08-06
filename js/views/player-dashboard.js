@@ -709,6 +709,12 @@ function createEntrySheetsCard(bootstrapRequest) {
     attributes: { role: 'status', 'aria-live': 'polite' },
   });
   const filterSelect = createElement('select', { attributes: { name: 'entrySheetFilter' } });
+  const everybodyPicks = createElement('button', {
+    className: 'secondary-button',
+    text: 'Everybody\'s Picks',
+    attributes: { type: 'button' },
+  });
+  const entryActions = createElement('div', { className: 'button-row' });
   [
     ['current', 'Current Week'],
     ['past', 'Past Weeks'],
@@ -718,10 +724,16 @@ function createEntrySheetsCard(bootstrapRequest) {
   });
   const list = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Entry sheets' } });
 
+  everybodyPicks.addEventListener('click', () => {
+    navigateTo('player-everybodys-picks');
+  });
+  entryActions.appendChild(everybodyPicks);
+
   appendChildren(card, [
     createElement('p', { className: 'eyebrow', text: 'Picks' }),
     createElement('h2', { text: 'My Entry Sheets' }),
     createElement('p', { className: 'muted', text: 'Each approved entry has its own weekly pick sheet.' }),
+    entryActions,
     createField('Entry sheet filter', filterSelect),
     status,
     list,

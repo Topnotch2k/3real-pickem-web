@@ -295,6 +295,11 @@ export function createManagerDashboardView(context = {}) {
     text: 'Manage Week',
     attributes: { type: 'button' },
   });
+  const everybodyPicksButton = createElement('button', {
+    className: 'secondary-button',
+    text: 'Everybody\'s Picks',
+    attributes: { type: 'button' },
+  });
   const pendingPayments = createElement('p', {
     className: 'status-pill',
     text: 'Pending Payments: 0',
@@ -318,6 +323,9 @@ export function createManagerDashboardView(context = {}) {
   });
   weekButton.addEventListener('click', () => {
     navigateTo('manager-week');
+  });
+  everybodyPicksButton.addEventListener('click', () => {
+    navigateTo('manager-everybodys-picks');
   });
 
   logoutButton.addEventListener('click', async () => {
@@ -357,7 +365,7 @@ export function createManagerDashboardView(context = {}) {
     }
   }
 
-  appendChildren(buttonRow, [playersButton, paymentsButton, weekButton, logoutButton]);
+  appendChildren(buttonRow, [playersButton, paymentsButton, weekButton, everybodyPicksButton, logoutButton]);
   appendChildren(card, [
     createElement('p', { className: 'eyebrow', text: 'League Manager' }),
     createElement('h1', { text: 'Manager Dashboard' }),
