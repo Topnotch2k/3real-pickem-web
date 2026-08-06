@@ -43,6 +43,10 @@ function parseGameScore(input) {
   return Number.isSafeInteger(score) ? score : null;
 }
 
+function displayedGamesAreFinal(games) {
+  return Array.isArray(games) && games.length > 0 && games.every((game) => game.status === 'final');
+}
+
 export function createManagerWeekView() {
   let weekData = null;
   let inFlight = false;
@@ -122,6 +126,17 @@ export function createManagerWeekView() {
       archiveButton.addEventListener('click', () => archiveWeek(archiveButton));
       actions.appendChild(archiveButton);
     }
+    const allGamesFinal = displayedGamesAreFinal(weekData.games || []);
+    if (week.status === 'open') {
+      const gradeButton = createElement('button', {
+        className: 'primary-button',
+        text: weekData.grading ? 'Regrade Week' : 'Grade Week',
+        attributes: { type: 'button' },
+      });
+      gradeButton.disabled = inFlight || !allGamesFinal;
+      gradeButton.addEventListener('click', () => gradeWeek());
+      actions.appendChild(gradeButton);
+    }
 
     const games = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Imported games' } });
     (weekData.games || []).forEach((game) => {
@@ -185,6 +200,7 @@ export function createManagerWeekView() {
       gameCard.appendChild(resultForm);
       games.appendChild(gameCard);
     });
+    const standings = renderStandings();
 
     appendChildren(detailCard, [
       createElement('p', { className: 'eyebrow', text: 'Current Week' }),
@@ -192,8 +208,40 @@ export function createManagerWeekView() {
       createElement('span', { className: `status-pill ${week.status === 'open' ? '' : 'status-pill-muted'}`, text: week.status }),
       details,
       actions,
+      ...(week.status === 'open' && !allGamesFinal ? [createElement('p', { className: 'muted', text: 'All Games must be final before grading.' })] : []),
       games,
+      ...(standings ? [standings] : []),
     ]);
+  }
+
+  function renderStandings() {
+    const grading = weekData && weekData.grading;
+    if (!grading) return null;
+    const section = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Weekly standings' } });
+    appendChildren(section, [
+      createElement('h3', { text: 'Weekly Standings' }),
+      createElement('p', { className: 'muted', text: `Graded ${formatDateTime(grading.gradedAt)}` }),
+    ]);
+    (grading.standings || []).forEach((standing) => {
+      const card = createElement('article', { className: 'player-card' });
+      const details = createElement('dl', { className: 'player-meta' });
+      [
+        ['Rank', String(standing.rank)],
+        ['Player', standing.playerName || 'Unknown player'],
+        ['Entry', standing.entryLabel || standing.entryId],
+        ['Correct picks', `${standing.regularPoints} of ${standing.totalGames}`],
+      ].forEach(([label, value]) => {
+        details.appendChild(createElement('dt', { text: label }));
+        details.appendChild(createElement('dd', { text: value || 'Not available' }));
+      });
+      appendChildren(card, [
+        createElement('h4', { text: `Rank ${standing.rank}` }),
+        createElement('span', { className: 'status-pill', text: `${standing.regularPoints} of ${standing.totalGames}` }),
+        details,
+      ]);
+      section.appendChild(card);
+    });
+    return section;
   }
 
   async function loadWeek() {
@@ -273,6 +321,27 @@ export function createManagerWeekView() {
       const result = await managerAction('manager.week.archive', { weekId: weekData.week.weekId });
       weekData = result.data;
       message.textContent = result.data.archived ? 'Week archived.' : 'Week was already archived.';
+      render();
+    } catch (error) {
+      message.textContent = error.message;
+      message.classList.add('error-text');
+    } finally {
+      setInFlight(false);
+      render();
+    }
+  }
+
+  async function gradeWeek() {
+    if (inFlight || !weekData || !weekData.week || weekData.week.status !== 'open' || !displayedGamesAreFinal(weekData.games || [])) return;
+    const regrade = Boolean(weekData.grading);
+    if (!window.confirm(regrade ? 'Regrade all active entries using the current final results?' : 'Grade all active entries for this Week?')) return;
+    setInFlight(true);
+    message.textContent = 'Grading Week...';
+    message.classList.remove('error-text');
+    try {
+      const result = await managerAction('manager.week.grade', { weekId: weekData.week.weekId });
+      weekData = { ...weekData, grading: result.data.grading };
+      message.textContent = regrade ? 'Week regraded.' : 'Week graded.';
       render();
     } catch (error) {
       message.textContent = error.message;
