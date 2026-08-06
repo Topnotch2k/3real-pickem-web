@@ -7,12 +7,14 @@ const READ_ONLY_ACTIONS = new Set([
   'manager.invite.get',
   'manager.payments.list',
   'manager.week.get',
+  'manager.week.picksBoard',
   'player.session',
   'player.dashboard.bootstrap',
   'player.invite.get',
   'player.payment.options',
   'player.payments.list',
   'player.week.entrySheets',
+  'player.week.picksBoard',
   'player.entry.picks.get',
 ]);
 const READ_RECOVERY_DELAY_MS = 350;

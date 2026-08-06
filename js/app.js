@@ -10,6 +10,7 @@ import { createPlayerRegisterView } from './views/player-register.js';
 import { createPlayerLoginView } from './views/player-login.js';
 import { createPlayerDashboardView } from './views/player-dashboard.js';
 import { createPlayerEntryPicksView } from './views/player-entry-picks.js';
+import { createEverybodysPicksView } from './views/everybodys-picks.js';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -138,8 +139,10 @@ registerRoute('manager-dashboard', createManagerDashboardView, { requiresManager
 registerRoute('manager-players', createManagerPlayersView, { requiresManagerSession: true });
 registerRoute('manager-payments', createManagerPaymentsView, { requiresManagerSession: true });
 registerRoute('manager-week', createManagerWeekView, { requiresManagerSession: true });
+registerRoute('manager-everybodys-picks', () => createEverybodysPicksView({ actor: 'manager' }), { requiresManagerSession: true });
 registerRoute('player-register', createPlayerRegisterView);
 registerRoute('player-login', createPlayerLoginView);
 registerRoute('player-dashboard', createPlayerDashboardView, { requiresPlayerSession: true });
 registerRoute('player-entry-picks', createPlayerEntryPicksView, { requiresPlayerSession: true });
+registerRoute('player-everybodys-picks', () => createEverybodysPicksView({ actor: 'player' }), { requiresPlayerSession: true });
 startRouter(root);

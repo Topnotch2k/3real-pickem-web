@@ -390,6 +390,74 @@ h1 {
   accent-color: var(--color-gold);
 }
 
+.picks-board-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.picks-board-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;
+}
+
+.picks-board-table th,
+.picks-board-table td {
+  min-width: 5.75rem;
+  border-bottom: 1px solid rgba(217, 173, 50, 0.22);
+  border-right: 1px solid rgba(217, 173, 50, 0.18);
+  padding: var(--space-2);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.picks-board-table th {
+  color: var(--color-gold-soft);
+  font-weight: 900;
+}
+
+.picks-board-table th span,
+.picks-board-player span {
+  display: block;
+}
+
+.picks-board-table small {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 0.72rem;
+}
+
+.picks-board-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 9rem;
+  background: var(--color-panel);
+}
+
+thead .picks-board-sticky {
+  z-index: 2;
+}
+
+.picks-board-player {
+  text-align: left;
+}
+
+.picks-board-pick {
+  font-weight: 900;
+}
+
+.picks-board-correct {
+  color: var(--color-success);
+}
+
+.picks-board-incorrect {
+  color: var(--color-danger);
+}
+
 @media (min-width: 720px) {
   .pick-team-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
