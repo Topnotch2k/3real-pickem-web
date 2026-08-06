@@ -279,10 +279,14 @@ function createInviteFriendsCard(player, bootstrapRequest) {
 function createPaymentWorkspace(bootstrapRequest, entrySheets) {
   let paymentOptions = null;
   let payments = [];
+  let rewardSummary = {
+    unusedFreeEntries: 0,
+  };
   let paymentHistoryFilter = 'current';
   let paymentsLoaded = false;
   let submitting = false;
   let activeClientRequest = null;
+  let activeFreeEntryRequest = null;
   let paymentsRequest = null;
   let paymentRefreshTimeout = null;
 
@@ -292,6 +296,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
   const quantitySelect = createElement('select', { attributes: { name: 'entriesPaid', disabled: 'disabled' } });
   const price = createElement('p', { className: 'muted', text: 'Loading current entry price...' });
   const total = createElement('p', { className: 'status-pill', text: 'Total unavailable' });
+  const freeEntryBalance = createElement('p', { className: 'status-pill status-pill-muted', text: 'Free entries available: 0' });
   const pendingNotice = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const message = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const submit = createElement('button', {
@@ -299,8 +304,14 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
     text: 'Submit Payment Request',
     attributes: { type: 'submit', disabled: 'disabled' },
   });
+  const redeemFreeEntry = createElement('button', {
+    className: 'secondary-button',
+    text: 'Redeem Free Entry',
+    attributes: { type: 'button', disabled: 'disabled' },
+  });
   const buttons = createElement('div', { className: 'button-row' });
   buttons.appendChild(submit);
+  buttons.appendChild(redeemFreeEntry);
 
   const historyCard = createElement('section', { className: 'state-card' });
   const historyStatus = createElement('p', {
@@ -338,10 +349,14 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
 
   function updateFormAvailability() {
     const activeRequest = activeRequestForCurrentWeek();
+    const freeEntryAvailable = Number(rewardSummary.unusedFreeEntries || 0) > 0;
     const disabled = !paymentOptions || !paymentsLoaded || submitting || Boolean(activeRequest);
     methodSelect.disabled = disabled;
     quantitySelect.disabled = disabled;
     submit.disabled = disabled;
+    redeemFreeEntry.disabled = !paymentOptions || !paymentsLoaded || submitting || !freeEntryAvailable;
+    freeEntryBalance.textContent = `Free entries available: ${Number(rewardSummary.unusedFreeEntries || 0)}`;
+    freeEntryBalance.className = `status-pill ${freeEntryAvailable ? '' : 'status-pill-muted'}`;
     pendingNotice.textContent = activeRequest
       ? 'You already have a payment request for this week. Wait for the manager to reject it before submitting another one.'
       : '';
@@ -414,6 +429,12 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
   async function loadOptions() {
     try {
       paymentOptions = await playerDashboardBootstrapSection(bootstrapRequest, 'paymentOptions');
+      try {
+        const referralData = await playerDashboardBootstrapSection(bootstrapRequest, 'referrals');
+        rewardSummary = referralData.rewardSummary || rewardSummary;
+      } catch (error) {
+        rewardSummary = { unusedFreeEntries: 0 };
+      }
       message.textContent = '';
       message.classList.remove('error-text');
       populateOptions();
@@ -552,6 +573,35 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
     clearLogicalRequest();
     updateTotal();
   });
+  redeemFreeEntry.addEventListener('click', async () => {
+    if (submitting || !paymentOptions || Number(rewardSummary.unusedFreeEntries || 0) < 1) {
+      return;
+    }
+    if (!activeFreeEntryRequest) {
+      activeFreeEntryRequest = createClientRequestId();
+    }
+    submitting = true;
+    message.classList.remove('error-text');
+    message.textContent = 'Redeeming free entry...';
+    updateFormAvailability();
+    try {
+      const result = await playerAction('player.freeEntry.redeem', {
+        weekId: paymentOptions.week.weekId,
+        clientRequestId: activeFreeEntryRequest,
+      });
+      rewardSummary = result.data.rewardSummary || rewardSummary;
+      activeFreeEntryRequest = null;
+      message.textContent = 'Free entry redeemed. Your new entry sheet is ready.';
+      await entrySheets.refresh();
+      updateFormAvailability();
+    } catch (error) {
+      message.textContent = error.message;
+      message.classList.add('error-text');
+    } finally {
+      submitting = false;
+      updateFormAvailability();
+    }
+  });
   historyFilter.addEventListener('change', () => {
     paymentHistoryFilter = historyFilter.value;
     renderHistory();
@@ -604,6 +654,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
     createField('Entry quantity', quantitySelect),
     price,
     total,
+    freeEntryBalance,
     buttons,
     pendingNotice,
     message,
