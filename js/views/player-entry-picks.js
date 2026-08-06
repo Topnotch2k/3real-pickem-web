@@ -55,8 +55,12 @@ export function createPlayerEntryPicksView() {
   });
   const back = createElement('button', { className: 'secondary-button', text: 'Player Dashboard', attributes: { type: 'button' } });
   const save = createElement('button', { className: 'primary-button', text: 'Save Picks', attributes: { type: 'button', disabled: 'disabled' } });
+  const weekBadge = createElement('span', {
+    className: 'status-pill',
+    text: 'WEEK',
+  });
   const buttons = createElement('div', { className: 'button-row' });
-  appendChildren(buttons, [save, back]);
+  appendChildren(buttons, [save, back, weekBadge]);
   appendChildren(header, [
     createElement('p', { className: 'eyebrow', text: 'Player Picks' }),
     createElement('h1', { text: 'Weekly Pick Sheet' }),
@@ -125,6 +129,7 @@ export function createPlayerEntryPicksView() {
       return;
     }
     const progress = state.progress || { completed: 0, total: 0 };
+    weekBadge.textContent = `WEEK ${state.week.nflWeek}`;
     const selected = selectedByGameId();
     currentSelections = { ...selected };
     currentPredictedTotal = authoritativePredictedTotal();
