@@ -561,17 +561,16 @@ function createEntrySheetsCard(bootstrapRequest) {
           : (await playerAction('player.week.entrySheets')).data;
         status.classList.remove('error-text');
         const entries = data.entries || [];
+        const completedEntries = data.completedEntries || [];
         list.replaceChildren();
         if (!data.week) {
           status.textContent = 'No Week is currently open for picks.';
-          return;
-        }
-        if (!entries.length) {
+        } else if (!entries.length) {
           status.textContent = 'No active entry sheets are available for the current Week.';
-          return;
+        } else {
+          status.textContent = '';
         }
-        status.textContent = '';
-        entries.forEach((entry) => {
+        if (data.week && entries.length) entries.forEach((entry) => {
           const entryCard = createElement('article', { className: 'player-card' });
           const details = createElement('dl', { className: 'player-meta' });
           [
@@ -606,6 +605,39 @@ function createEntrySheetsCard(bootstrapRequest) {
           ]);
           list.appendChild(entryCard);
         });
+        if (completedEntries.length) {
+          list.appendChild(createElement('h3', { text: 'Completed Results' }));
+          completedEntries.forEach((entry) => {
+            const entryCard = createElement('article', { className: 'player-card' });
+            const details = createElement('dl', { className: 'player-meta' });
+            [
+              ['Week', `Season ${entry.week.season} Â· Week ${entry.week.nflWeek}`],
+              ['Score', `${entry.result.regularPoints} of ${entry.result.totalGames}`],
+              ['Rank', String(entry.result.rank)],
+              ['Graded', formatDateTime(entry.result.gradedAt)],
+            ].forEach(([label, value]) => {
+              details.appendChild(createElement('dt', { text: label }));
+              details.appendChild(createElement('dd', { text: value }));
+            });
+            const open = createElement('button', {
+              className: 'primary-button',
+              text: 'View Results',
+              attributes: { type: 'button' },
+            });
+            open.addEventListener('click', () => {
+              navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
+            });
+            const buttons = createElement('div', { className: 'button-row' });
+            buttons.appendChild(open);
+            appendChildren(entryCard, [
+              createElement('h3', { text: entry.entryLabel || 'Entry' }),
+              createElement('span', { className: 'status-pill', text: `${entry.result.regularPoints} of ${entry.result.totalGames}` }),
+              details,
+              buttons,
+            ]);
+            list.appendChild(entryCard);
+          });
+        }
       } catch (error) {
         if (!background) {
           status.textContent = error.message;
