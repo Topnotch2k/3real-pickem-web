@@ -64,7 +64,8 @@ function paymentMethodLabel(method) {
 function paymentStatusLabel(status) {
   return {
     pending: 'Pending',
-    approved: 'Approved',
+    approved: 'Awaiting Payment',
+    paid: 'Paid',
     rejected: 'Rejected',
   }[status] || 'Unknown';
 }
@@ -72,7 +73,8 @@ function paymentStatusLabel(status) {
 function emptyMessageForStatus(status) {
   return {
     pending: 'No pending payment requests.',
-    approved: 'No approved payment requests.',
+    approved: 'No approved payment requests awaiting payment.',
+    paid: 'No paid payment requests.',
     rejected: 'No rejected payment requests.',
     all: 'No payment requests yet.',
   }[status] || 'No payment requests yet.';
@@ -83,12 +85,21 @@ function shouldRefreshAfterMutationError(error) {
     'NETWORK_ERROR',
     'PARSE_ERROR',
     'APPROVAL_RESPONSE_INCOMPLETE',
+    'MARK_PAID_RESPONSE_INCOMPLETE',
     'REJECTION_RESPONSE_INCOMPLETE',
     'PAYMENT_ALREADY_APPROVED',
     'PAYMENT_ALREADY_REJECTED',
     'PAYMENT_STATUS_INVALID',
     'PAYMENT_STATUS_REVIEW_REQUIRED',
   ].indexOf(error && error.code) !== -1;
+}
+
+function incompleteMarkPaidResponseError() {
+  const error = new Error('Payment confirmation may have completed, but the response was incomplete.');
+  error.code = 'MARK_PAID_RESPONSE_INCOMPLETE';
+  error.reconciledMessage = 'Payment confirmation may have completed, but the response was incomplete. The payment list was refreshed to confirm its status.';
+  error.refreshFailedMessage = 'Payment confirmation may have completed, but the response was incomplete and the payment list could not refresh.';
+  return error;
 }
 
 function incompleteApprovalResponseError() {
@@ -131,7 +142,7 @@ function validateMutationPayment(result, currentPayment, expectedStatus, errorFa
     || returnedPayment.status !== expectedStatus
     || typeof returnedPayment.createdAt !== 'string'
     || typeof returnedPayment.updatedAt !== 'string'
-    || (expectedStatus === 'approved' && (
+    || (['approved', 'paid'].indexOf(expectedStatus) !== -1 && (
       typeof returnedPayment.approvedAt !== 'string'
       || !isNonNegativeInteger(returnedPayment.entriesCreatedCount)
     ))
@@ -229,7 +240,8 @@ export function createManagerPaymentsView() {
   const statusSelect = createElement('select', { attributes: { 'aria-label': 'Payment status' } });
   [
     ['pending', 'Pending'],
-    ['approved', 'Approved'],
+    ['approved', 'Awaiting Payment'],
+    ['paid', 'Paid'],
     ['rejected', 'Rejected'],
     ['all', 'All'],
   ].forEach(([value, label]) => {
@@ -273,7 +285,7 @@ export function createManagerPaymentsView() {
     createElement('h1', { text: 'Payment Requests' }),
     createElement('p', {
       className: 'muted',
-      text: 'Review player payment requests after confirming payment outside the app. Approving a request creates the player\'s entry sheets.',
+      text: 'Review payment requests, approve them, then mark them paid after confirming money outside the app.',
     }),
     controls,
     message,
@@ -373,7 +385,7 @@ export function createManagerPaymentsView() {
     const avatar = createElement('span', { className: 'player-avatar', text: player.avatar || 'football' });
     const title = createElement('div');
     const status = createElement('span', {
-      className: `status-pill ${payment.status === 'approved' ? '' : 'status-pill-muted'}`,
+      className: `status-pill ${payment.status === 'paid' ? '' : 'status-pill-muted'}`,
       text: paymentStatusLabel(payment.status),
     });
     appendChildren(title, [createElement('h3', { text: player.displayName || 'Unknown player' }), status]);
@@ -388,6 +400,10 @@ export function createManagerPaymentsView() {
       ['Submitted', formatDate(payment.createdAt)],
     ];
     if (payment.status === 'approved') {
+      rows.push(['Approved', formatDate(payment.approvedAt)]);
+      rows.push(['Payment status', 'Awaiting payment confirmation']);
+    }
+    if (payment.status === 'paid') {
       rows.push(['Approved', formatDate(payment.approvedAt)]);
       rows.push(['Entries created', String(payment.entriesCreatedCount || 0)]);
     }
@@ -406,6 +422,9 @@ export function createManagerPaymentsView() {
     if (payment.status === 'pending') {
       card.appendChild(createPendingControls(payment));
     }
+    if (payment.status === 'approved') {
+      card.appendChild(createMarkPaidControls(payment));
+    }
     return card;
   }
 
@@ -416,8 +435,8 @@ export function createManagerPaymentsView() {
 
     const region = createElement('section');
     const actions = createElement('div', { className: 'button-row' });
-    const approve = createElement('button', { className: 'primary-button', text: 'Approve', attributes: { type: 'button' } });
-    const reject = createElement('button', { className: 'secondary-button', text: 'Reject', attributes: { type: 'button' } });
+    const approve = createElement('button', { className: 'primary-button', text: 'Approve Request', attributes: { type: 'button' } });
+    const reject = createElement('button', { className: 'secondary-button', text: 'Reject Request', attributes: { type: 'button' } });
     const mutationStatus = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
     const setDisabled = (disabled) => {
       approve.disabled = disabled;
@@ -433,6 +452,21 @@ export function createManagerPaymentsView() {
       renderPayments();
     });
     appendChildren(actions, [approve, reject]);
+    appendChildren(region, [actions, mutationStatus]);
+    return region;
+  }
+
+  function createMarkPaidControls(payment) {
+    const region = createElement('section');
+    const actions = createElement('div', { className: 'button-row' });
+    const markPaid = createElement('button', { className: 'primary-button', text: 'Mark Paid', attributes: { type: 'button' } });
+    const mutationStatus = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+    const setDisabled = (disabled) => {
+      markPaid.disabled = disabled;
+    };
+    setDisabled(inFlightPaymentIds.has(payment.paymentId) || blockedPaymentIds.has(payment.paymentId));
+    markPaid.addEventListener('click', () => markPaymentPaid(payment, mutationStatus, setDisabled));
+    appendChildren(actions, [markPaid]);
     appendChildren(region, [actions, mutationStatus]);
     return region;
   }
@@ -488,16 +522,70 @@ export function createManagerPaymentsView() {
     weekSelect.disabled = true;
     setDisabled(true);
     mutationStatus.classList.remove('error-text');
-    mutationStatus.textContent = 'Approving payment...';
+    mutationStatus.textContent = 'Approving request...';
     try {
       const result = await managerAction('manager.payment.approve', { paymentId: payment.paymentId });
       if (!result || !result.data || !Array.isArray(result.data.entries)) {
         throw incompleteApprovalResponseError();
       }
       const returnedPayment = validateMutationPayment(result, payment, 'approved', incompleteApprovalResponseError);
-      const entryCount = result.data.entries.length;
+      const successMessage = 'Request approved. Awaiting payment confirmation.';
+      mutationStatus.textContent = successMessage;
+      applyMutationPayment(payment, returnedPayment, successMessage);
+    } catch (error) {
+      mutationStatus.textContent = error.message;
+      mutationStatus.classList.add('error-text');
+      if (shouldRefreshAfterMutationError(error)) {
+        blockPayment(payment.paymentId, error);
+        const refreshOutcome = await loadPayments({ preserveMessage: true });
+        if (refreshOutcome.status === 'applied') {
+          publishReconciliationNotice(error.reconciledMessage || error.message);
+        } else if (refreshOutcome.status === 'failed') {
+          const refreshFailedMessage = error.refreshFailedMessage || `${error.message} Payment list could not refresh.`;
+          mutationStatus.textContent = refreshFailedMessage;
+          publishReconciliationNotice(refreshFailedMessage);
+        }
+      }
+    } finally {
+      inFlightPaymentIds.delete(payment.paymentId);
+      statusSelect.disabled = inFlightPaymentIds.size > 0;
+      weekSelect.disabled = inFlightPaymentIds.size > 0;
+      const reconciliation = reconcileBlockedPayments();
+      if (reconciliation.changed) {
+        renderPayments();
+      }
+      publishReconciliationNotices(reconciliation.notices);
+      if (!blockedPaymentIds.has(payment.paymentId)) {
+        setDisabled(false);
+      }
+    }
+  }
+
+  async function markPaymentPaid(payment, mutationStatus, setDisabled) {
+    if (inFlightPaymentIds.has(payment.paymentId) || blockedPaymentIds.has(payment.paymentId)) {
+      return;
+    }
+    const amount = formatMoney(payment.amountDueCents, payment.amountDue);
+    const playerName = payment.player && payment.player.displayName ? payment.player.displayName : 'this player';
+    if (!window.confirm(`Mark ${amount} from ${playerName} paid?`)) {
+      return;
+    }
+
+    inFlightPaymentIds.add(payment.paymentId);
+    statusSelect.disabled = true;
+    weekSelect.disabled = true;
+    setDisabled(true);
+    mutationStatus.classList.remove('error-text');
+    mutationStatus.textContent = 'Marking payment paid...';
+    try {
+      const result = await managerAction('manager.payment.markPaid', { paymentId: payment.paymentId });
+      if (!result || !result.data || !Array.isArray(result.data.entries)) {
+        throw incompleteMarkPaidResponseError();
+      }
+      const returnedPayment = validateMutationPayment(result, payment, 'paid', incompleteMarkPaidResponseError);
+      const entryCount = result.data.entries.length || returnedPayment.entriesCreatedCount || 0;
       const noun = entryCount === 1 ? 'entry was' : 'entries were';
-      const successMessage = `Payment approved. ${entryCount} ${noun} created or confirmed.`;
+      const successMessage = `Payment marked paid. ${entryCount} ${noun} created or confirmed.`;
       mutationStatus.textContent = successMessage;
       applyMutationPayment(payment, returnedPayment, successMessage);
     } catch (error) {
