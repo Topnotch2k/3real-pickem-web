@@ -146,7 +146,8 @@ export function createPlayerEntryPicksView() {
       details,
     ]);
     if (state.tiebreaker) {
-      const tiebreakerField = createElement('label', { className: 'form-field' });
+      const tiebreakerSection = createElement('section', { className: 'tiebreaker-panel' });
+      const tiebreakerField = createElement('label', { className: 'form-field tiebreaker-total-field' });
       const input = createElement('input', {
         attributes: {
           type: 'number',
@@ -164,7 +165,6 @@ export function createPlayerEntryPicksView() {
       appendChildren(tiebreakerField, [
         createElement('span', { text: 'Predicted Total Points' }),
         input,
-        createElement('small', { className: 'muted', text: `Tiebreaker: ${state.tiebreaker.awayTeam} at ${state.tiebreaker.homeTeam}` }),
         createElement('small', { className: 'muted', text: 'Enter the combined final score for the tiebreaker game.' }),
         createElement('small', {
           className: 'muted',
@@ -173,7 +173,12 @@ export function createPlayerEntryPicksView() {
             : `Locked: ${formatDateTime(state.tiebreaker.lockAt)}`,
         }),
       ]);
-      summary.appendChild(tiebreakerField);
+      appendChildren(tiebreakerSection, [
+        createElement('p', { className: 'eyebrow', text: 'Tiebreaker' }),
+        createElement('h3', { className: 'tiebreaker-matchup', text: `${state.tiebreaker.awayTeam} at ${state.tiebreaker.homeTeam}` }),
+        tiebreakerField,
+      ]);
+      summary.appendChild(tiebreakerSection);
     }
     if (state.result) {
       const resultDetails = createElement('dl', { className: 'player-meta' });
