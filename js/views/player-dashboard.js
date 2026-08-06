@@ -136,11 +136,11 @@ function createInviteFriendsCard(player, bootstrapRequest) {
   const controls = createElement('div', { className: 'button-row' });
   const referralList = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'People you invited' } });
 
-  async function loadInvite() {
+  async function loadInvite(request = bootstrapRequest) {
     try {
-      const data = await playerDashboardBootstrapSection(bootstrapRequest, 'invite');
+      const data = await playerDashboardBootstrapSection(request, 'invite');
       inviteData = data.invite;
-      const referralData = await playerDashboardBootstrapSection(bootstrapRequest, 'referrals');
+      const referralData = await playerDashboardBootstrapSection(request, 'referrals');
       referrals = referralData.referrals || [];
       rewardSummary = referralData.rewardSummary || rewardSummary;
       render();
@@ -273,10 +273,13 @@ function createInviteFriendsCard(player, bootstrapRequest) {
 
   render();
   loadInvite();
-  return card;
+  return {
+    card,
+    refresh: () => loadInvite(playerAction('player.dashboard.bootstrap')),
+  };
 }
 
-function createPaymentWorkspace(bootstrapRequest, entrySheets) {
+function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   let paymentOptions = null;
   let payments = [];
   let rewardSummary = {
@@ -589,10 +592,22 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets) {
         weekId: paymentOptions.week.weekId,
         clientRequestId: activeFreeEntryRequest,
       });
+      const previousUnused = Number(rewardSummary.unusedFreeEntries || 0);
       rewardSummary = result.data.rewardSummary || rewardSummary;
+      if (Number(rewardSummary.unusedFreeEntries || 0) >= previousUnused && previousUnused > 0) {
+        rewardSummary = {
+          ...rewardSummary,
+          unusedFreeEntries: previousUnused - 1,
+          usedFreeEntries: Number(rewardSummary.usedFreeEntries || 0) + 1,
+        };
+      }
       activeFreeEntryRequest = null;
       message.textContent = 'Free entry redeemed. Your new entry sheet is ready.';
-      await entrySheets.refresh();
+      updateFormAvailability();
+      await Promise.all([
+        entrySheets.refresh(),
+        inviteFriends.refresh(),
+      ]);
       updateFormAvailability();
     } catch (error) {
       message.textContent = error.message;
@@ -837,7 +852,8 @@ export function createPlayerDashboardView(context = {}) {
   const details = createElement('dl', { className: 'player-meta' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
   const entrySheets = createEntrySheetsCard(bootstrapRequest);
-  const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets);
+  const inviteFriends = createInviteFriendsCard(player, bootstrapRequest);
+  const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends);
 
   [
     ['Profile', 'Active'],
@@ -869,7 +885,7 @@ export function createPlayerDashboardView(context = {}) {
     paymentWorkspace.requestCard,
     paymentWorkspace.historyCard,
     entrySheets.card,
-    createInviteFriendsCard(player, bootstrapRequest),
+    inviteFriends.card,
   ]);
   return wrapper;
 }
