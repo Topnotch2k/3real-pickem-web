@@ -700,11 +700,21 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
 function createEntrySheetsCard(bootstrapRequest) {
   let entrySheetsRequest = null;
   let entrySheetsRefreshQueued = false;
+  let entrySheetFilter = 'current';
+  let latestEntrySheetsData = null;
   const card = createElement('section', { className: 'state-card' });
   const status = createElement('p', {
     className: 'muted',
     text: 'Loading entry sheets...',
     attributes: { role: 'status', 'aria-live': 'polite' },
+  });
+  const filterSelect = createElement('select', { attributes: { name: 'entrySheetFilter' } });
+  [
+    ['current', 'Current Week'],
+    ['past', 'Past Weeks'],
+    ['all', 'All Weeks'],
+  ].forEach(([value, label]) => {
+    filterSelect.appendChild(createElement('option', { text: label, attributes: { value } }));
   });
   const list = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Entry sheets' } });
 
@@ -712,9 +722,122 @@ function createEntrySheetsCard(bootstrapRequest) {
     createElement('p', { className: 'eyebrow', text: 'Picks' }),
     createElement('h2', { text: 'My Entry Sheets' }),
     createElement('p', { className: 'muted', text: 'Each approved entry has its own weekly pick sheet.' }),
+    createField('Entry sheet filter', filterSelect),
     status,
     list,
   ]);
+
+  function renderCurrentEntries(data, entries) {
+    if (data.week && entries.length) entries.forEach((entry) => {
+      const entryCard = createElement('article', { className: 'player-card' });
+      const details = createElement('dl', { className: 'player-meta' });
+      [
+        ['Week', `Season ${data.week.season} - Week ${data.week.nflWeek}`],
+        ['Progress', `${entry.completedPicks} of ${entry.totalGames} picks completed`],
+      ].forEach(([label, value]) => {
+        details.appendChild(createElement('dt', { text: label }));
+        details.appendChild(createElement('dd', { text: value }));
+      });
+      const open = createElement('button', {
+        className: 'primary-button',
+        text: entry.completedPicks > 0 ? 'Edit Picks' : 'Make Picks',
+        attributes: { type: 'button' },
+      });
+      open.addEventListener('click', () => {
+        navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
+      });
+      const buttons = createElement('div', { className: 'button-row' });
+      buttons.appendChild(open);
+      appendChildren(entryCard, [
+        createElement('h3', { text: entry.entryLabel || 'Entry' }),
+        createElement('span', {
+          className: `status-pill ${entry.status === 'active' ? '' : 'status-pill-muted'}`,
+          text: entry.status === 'active' ? 'Active' : 'Unknown',
+        }),
+        createElement('span', {
+          className: `status-pill ${entry.complete ? '' : 'status-pill-muted'}`,
+          text: entry.complete ? 'Complete' : 'In progress',
+        }),
+        details,
+        buttons,
+      ]);
+      list.appendChild(entryCard);
+    });
+  }
+
+  function renderCompletedEntries(completedEntries) {
+    if (completedEntries.length) {
+      list.appendChild(createElement('h3', { text: 'Completed Results' }));
+      completedEntries.forEach((entry) => {
+        const entryCard = createElement('article', { className: 'player-card' });
+        const details = createElement('dl', { className: 'player-meta' });
+        [
+          ['Week', `Season ${entry.week.season} - Week ${entry.week.nflWeek}`],
+          ['Score', `${entry.result.regularPoints} of ${entry.result.totalGames}`],
+          ['Rank', String(entry.result.rank)],
+          ['Graded', formatDateTime(entry.result.gradedAt)],
+        ].forEach(([label, value]) => {
+          details.appendChild(createElement('dt', { text: label }));
+          details.appendChild(createElement('dd', { text: value }));
+        });
+        const open = createElement('button', {
+          className: 'primary-button',
+          text: 'View Results',
+          attributes: { type: 'button' },
+        });
+        open.addEventListener('click', () => {
+          navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
+        });
+        const buttons = createElement('div', { className: 'button-row' });
+        buttons.appendChild(open);
+        appendChildren(entryCard, [
+          createElement('h3', { text: entry.entryLabel || 'Entry' }),
+          createElement('span', { className: 'status-pill', text: `${entry.result.regularPoints} of ${entry.result.totalGames}` }),
+          details,
+          buttons,
+        ]);
+        list.appendChild(entryCard);
+      });
+    }
+  }
+
+  function renderEntrySheets() {
+    if (!latestEntrySheetsData) {
+      return;
+    }
+    const data = latestEntrySheetsData;
+    const entries = data.entries || [];
+    const completedEntries = data.completedEntries || [];
+    list.replaceChildren();
+    if (entrySheetFilter === 'current') {
+      if (!data.week) {
+        status.textContent = 'No Week is currently open for picks.';
+      } else if (!entries.length) {
+        status.textContent = 'No current Week entries.';
+      } else {
+        status.textContent = '';
+      }
+      renderCurrentEntries(data, entries);
+      return;
+    }
+    if (entrySheetFilter === 'past') {
+      status.textContent = completedEntries.length ? '' : 'No past Week entries.';
+      renderCompletedEntries(completedEntries);
+      return;
+    }
+    if (!entries.length && !completedEntries.length) {
+      status.textContent = 'No entry sheets yet.';
+      return;
+    }
+    status.textContent = '';
+    renderCurrentEntries(data, entries);
+    renderCompletedEntries(completedEntries);
+  }
+
+  filterSelect.addEventListener('change', () => {
+    entrySheetFilter = filterSelect.value;
+    renderEntrySheets();
+  });
 
   async function loadEntrySheets(initialBootstrapRequest = null, background = false) {
     if (entrySheetsRequest) {
@@ -738,84 +861,9 @@ function createEntrySheetsCard(bootstrapRequest) {
           ? await playerDashboardBootstrapSection(initialBootstrapRequest, 'entrySheets')
           : (await playerAction('player.week.entrySheets')).data;
         status.classList.remove('error-text');
-        const entries = data.entries || [];
-        const completedEntries = data.completedEntries || [];
-        list.replaceChildren();
-        if (!data.week) {
-          status.textContent = 'No Week is currently open for picks.';
-        } else if (!entries.length) {
-          status.textContent = 'No active entry sheets are available for the current Week.';
-        } else {
-          status.textContent = '';
-        }
-        if (data.week && entries.length) entries.forEach((entry) => {
-          const entryCard = createElement('article', { className: 'player-card' });
-          const details = createElement('dl', { className: 'player-meta' });
-          [
-            ['Week', `Season ${data.week.season} · Week ${data.week.nflWeek}`],
-            ['Progress', `${entry.completedPicks} of ${entry.totalGames} picks completed`],
-          ].forEach(([label, value]) => {
-            details.appendChild(createElement('dt', { text: label }));
-            details.appendChild(createElement('dd', { text: value }));
-          });
-          const open = createElement('button', {
-            className: 'primary-button',
-            text: entry.completedPicks > 0 ? 'Edit Picks' : 'Make Picks',
-            attributes: { type: 'button' },
-          });
-          open.addEventListener('click', () => {
-            navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
-          });
-          const buttons = createElement('div', { className: 'button-row' });
-          buttons.appendChild(open);
-          appendChildren(entryCard, [
-            createElement('h3', { text: entry.entryLabel || 'Entry' }),
-            createElement('span', {
-              className: `status-pill ${entry.status === 'active' ? '' : 'status-pill-muted'}`,
-              text: entry.status === 'active' ? 'Active' : 'Unknown',
-            }),
-            createElement('span', {
-              className: `status-pill ${entry.complete ? '' : 'status-pill-muted'}`,
-              text: entry.complete ? 'Complete' : 'In progress',
-            }),
-            details,
-            buttons,
-          ]);
-          list.appendChild(entryCard);
-        });
-        if (completedEntries.length) {
-          list.appendChild(createElement('h3', { text: 'Completed Results' }));
-          completedEntries.forEach((entry) => {
-            const entryCard = createElement('article', { className: 'player-card' });
-            const details = createElement('dl', { className: 'player-meta' });
-            [
-              ['Week', `Season ${entry.week.season} - Week ${entry.week.nflWeek}`],
-              ['Score', `${entry.result.regularPoints} of ${entry.result.totalGames}`],
-              ['Rank', String(entry.result.rank)],
-              ['Graded', formatDateTime(entry.result.gradedAt)],
-            ].forEach(([label, value]) => {
-              details.appendChild(createElement('dt', { text: label }));
-              details.appendChild(createElement('dd', { text: value }));
-            });
-            const open = createElement('button', {
-              className: 'primary-button',
-              text: 'View Results',
-              attributes: { type: 'button' },
-            });
-            open.addEventListener('click', () => {
-              navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
-            });
-            const buttons = createElement('div', { className: 'button-row' });
-            buttons.appendChild(open);
-            appendChildren(entryCard, [
-              createElement('h3', { text: entry.entryLabel || 'Entry' }),
-              createElement('span', { className: 'status-pill', text: `${entry.result.regularPoints} of ${entry.result.totalGames}` }),
-              details,
-              buttons,
-            ]);
-            list.appendChild(entryCard);
-          });
-        }
+        latestEntrySheetsData = data;
+        renderEntrySheets();
+        return;
       } catch (error) {
         if (!background) {
           status.textContent = error.message;
