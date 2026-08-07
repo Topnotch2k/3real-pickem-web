@@ -144,7 +144,7 @@ export function createManagerWeekView() {
       archiveButton.addEventListener('click', () => archiveWeek(archiveButton));
       actions.appendChild(archiveButton);
     }
-    if ((week.provider || weekData.provider) === 'odds' && week.status !== 'archived') {
+    if (['highlightly', 'odds'].includes(week.provider || weekData.provider) && week.status !== 'archived') {
       const refreshScoresButton = createElement('button', { className: 'secondary-button', text: 'Refresh Scores', attributes: { type: 'button' } });
       refreshScoresButton.disabled = inFlight;
       refreshScoresButton.addEventListener('click', () => refreshScores());
@@ -377,7 +377,7 @@ export function createManagerWeekView() {
   }
 
   async function refreshScores() {
-    if (inFlight || !weekData || !weekData.week || (weekData.week.provider || weekData.provider) !== 'odds' || weekData.week.status === 'archived') return;
+    if (inFlight || !weekData || !weekData.week || !['highlightly', 'odds'].includes(weekData.week.provider || weekData.provider) || weekData.week.status === 'archived') return;
     setInFlight(true);
     message.textContent = 'Refreshing scores...';
     message.classList.remove('error-text');
