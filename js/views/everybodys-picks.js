@@ -179,20 +179,14 @@ function renderLeaderCategory(title, rows, value) {
 }
 
 function renderLeagueLeaders(data) {
-  const section = createElement('section', { className: 'state-card' });
-  appendChildren(section, [
-    createElement('p', { className: 'eyebrow', text: 'Main Event' }),
-    createElement('h2', { text: 'League Leaders' }),
-  ]);
+  const section = createElement('section', { className: 'league-leaders-grid' });
   const leaders = data && data.leaders ? data.leaders : {};
-  const grid = createElement('div', { className: 'league-leaders-grid' });
-  appendChildren(grid, [
-    renderLeaderCategory('👑 Most Wins', leaders.mostWins, (leader) => `${displayValue(leader.weeklyWins)} ${plural(leader.weeklyWins, 'win', 'wins')}`),
-    renderLeaderCategory('🎯 Best Accuracy', leaders.bestAccuracy, (leader) => formatPercent(leader.accuracy)),
-    renderLeaderCategory('🔥 Best Streak', leaders.bestStreak, (leader) => `${displayValue(leader.longestStreak)} ${plural(leader.longestStreak, 'week', 'weeks')}`),
-    renderLeaderCategory('🤝 Top Recruiter', leaders.topRecruiter, (leader) => `${displayValue(leader.qualifiedReferralCount)} ${plural(leader.qualifiedReferralCount, 'recruit', 'recruits')}`),
+  appendChildren(section, [
+    renderLeaderCategory('\uD83D\uDC51 Most Wins', leaders.mostWins, (leader) => `${displayValue(leader.weeklyWins)} ${plural(leader.weeklyWins, 'win', 'wins')}`),
+    renderLeaderCategory('\uD83C\uDFAF Best Accuracy', leaders.bestAccuracy, (leader) => formatPercent(leader.accuracy)),
+    renderLeaderCategory('\uD83D\uDD25 Best Streak', leaders.bestStreak, (leader) => `${displayValue(leader.longestStreak)} ${plural(leader.longestStreak, 'week', 'weeks')}`),
+    renderLeaderCategory('\uD83E\uDD1D Top Recruiter', leaders.topRecruiter, (leader) => `${displayValue(leader.qualifiedReferralCount)} ${plural(leader.qualifiedReferralCount, 'recruit', 'recruits')}`),
   ]);
-  section.appendChild(grid);
   return section;
 }
 
@@ -397,7 +391,7 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     controls,
     message,
   ]);
-  appendChildren(wrapper, [header, leadersRegion, leaderboardRegion, boardRegion]);
+  appendChildren(wrapper, [leadersRegion, header, boardRegion, leaderboardRegion]);
   loadBoard();
   return wrapper;
 }

@@ -398,31 +398,32 @@ h1 {
 
 .league-leaders-grid {
   display: grid;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
 }
 
 .league-leader-card {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-width: 0;
-  padding: var(--space-3);
+  padding: var(--space-2);
   border: 1px solid rgba(217, 173, 50, 0.34);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: rgba(0, 0, 0, 0.16);
 }
 
 .league-leader-card h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
 }
 
 .league-leader-list {
   display: grid;
-  gap: var(--space-2);
+  gap: 0.2rem;
   margin: 0;
   padding: 0;
   list-style: none;
+  font-size: 0.78rem;
 }
 
 .league-leader-list li {
@@ -434,7 +435,7 @@ h1 {
 
 .leaderboard-section {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .leaderboard-scroll {
@@ -473,9 +474,9 @@ h1 {
   margin-top: var(--space-1);
 }
 
-@media (min-width: 42rem) {
+@media (max-width: 24rem) {
   .league-leaders-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 
