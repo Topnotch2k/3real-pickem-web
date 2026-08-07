@@ -181,6 +181,10 @@ h1 {
   gap: var(--space-3);
 }
 
+.week-controls .button-row {
+  margin-top: 0;
+}
+
 .manager-controls input,
 .manager-controls select,
 .form-field select,
@@ -196,6 +200,20 @@ h1 {
 
 .form-field textarea {
   resize: vertical;
+}
+
+.week-score-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.week-score-form .button-row {
+  margin-top: 0;
+}
+
+.week-score-form .muted {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 
 .player-workspace {
@@ -288,6 +306,16 @@ h1 {
   .manager-controls {
     grid-template-columns: minmax(12rem, 1fr) minmax(10rem, 14rem) auto auto;
     align-items: center;
+  }
+
+  .week-controls {
+    grid-template-columns: minmax(6rem, 8rem) minmax(10rem, 13rem) minmax(5rem, 7rem) auto;
+    align-items: end;
+  }
+
+  .week-score-form {
+    grid-template-columns: minmax(6rem, 8rem) minmax(6rem, 8rem) auto;
+    align-items: end;
   }
 
   .player-list {

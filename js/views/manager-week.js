@@ -112,9 +112,10 @@ export function createManagerWeekView() {
   let weekData = null;
   let inFlight = false;
   const wrapper = createElement('main', { className: 'page-container' });
-  const controlsCard = createElement('section', { className: 'state-card' });
-  const detailCard = createElement('section', { className: 'state-card' });
+  const controlsCard = createElement('section', { className: 'state-card manager-toolbar' });
+  const detailCard = createElement('section', { className: 'state-card compact-card' });
   const form = createElement('form', { className: 'auth-form' });
+  const controls = createElement('div', { className: 'manager-controls week-controls' });
   const seasonInput = createElement('input', {
     attributes: { name: 'season', type: 'number', min: '2000', max: '9999', step: '1', required: 'required' },
   });
@@ -213,7 +214,8 @@ export function createManagerWeekView() {
 
     const games = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Imported games' } });
     (weekData.games || []).forEach((game) => {
-      const gameCard = createElement('article', { className: 'player-card' });
+      const gameCard = createElement('article', { className: 'player-card compact-card' });
+      const gameHeader = createElement('div', { className: 'player-card-header' });
       const gameDetails = createElement('dl', { className: 'player-meta' });
       [
         ['Day', formatWeekday(game.kickoffAt)],
@@ -235,7 +237,7 @@ export function createManagerWeekView() {
       if (game.homeScore !== '' && game.homeScore !== null && game.homeScore !== undefined) {
         homeScoreInput.value = String(game.homeScore);
       }
-      const resultForm = createElement('form', { className: 'auth-form' });
+      const resultForm = createElement('form', { className: 'week-score-form' });
       const resultButtons = createElement('div', { className: 'button-row' });
       const saveResultButton = createElement('button', {
         className: 'primary-button',
@@ -258,9 +260,12 @@ export function createManagerWeekView() {
         resultButtons,
         resultStatus,
       ]);
-      appendChildren(gameCard, [
+      appendChildren(gameHeader, [
         createElement('h3', { text: `${game.awayTeam} at ${game.homeTeam}` }),
         createElement('span', { className: `status-pill ${game.status === 'scheduled' ? '' : 'status-pill-muted'}`, text: game.status || 'Unknown' }),
+      ]);
+      appendChildren(gameCard, [
+        gameHeader,
         gameDetails,
       ]);
       const hasSavedScores = game.status === 'final' && game.awayScore !== '' && game.homeScore !== '';
@@ -275,10 +280,14 @@ export function createManagerWeekView() {
     });
     const standings = renderStandings();
 
-    appendChildren(detailCard, [
-      createElement('p', { className: 'eyebrow', text: 'Current Week' }),
+    const weekHeader = createElement('div', { className: 'player-card-header' });
+    appendChildren(weekHeader, [
       createElement('h2', { text: `${seasonTypeLabel(week.seasonType)} Week ${week.nflWeek}` }),
       createElement('span', { className: `status-pill ${week.status === 'open' ? '' : 'status-pill-muted'}`, text: week.status }),
+    ]);
+    appendChildren(detailCard, [
+      createElement('p', { className: 'eyebrow', text: 'Current Week' }),
+      weekHeader,
       details,
       actions,
       ...(week.status === 'open' && !allGamesFinal ? [createElement('p', { className: 'muted', text: 'All Games must be final before grading.' })] : []),
@@ -489,7 +498,8 @@ export function createManagerWeekView() {
   backButton.addEventListener('click', () => navigateTo('manager-dashboard'));
 
   appendChildren(formButtons, [importButton, backButton]);
-  appendChildren(form, [createField('Season', seasonInput), createField('Season Type', seasonTypeSelect), createField('NFL week', weekInput), formButtons, message]);
+  appendChildren(controls, [createField('Season', seasonInput), createField('Season Type', seasonTypeSelect), createField('NFL week', weekInput), formButtons]);
+  appendChildren(form, [controls, message]);
   appendChildren(controlsCard, [
     createElement('p', { className: 'eyebrow', text: 'League Manager' }),
     createElement('h1', { text: 'Week Management' }),
