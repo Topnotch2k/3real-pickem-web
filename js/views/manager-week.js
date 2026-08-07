@@ -144,6 +144,12 @@ export function createManagerWeekView() {
       archiveButton.addEventListener('click', () => archiveWeek(archiveButton));
       actions.appendChild(archiveButton);
     }
+    if ((week.provider || weekData.provider) === 'odds' && week.status !== 'archived') {
+      const refreshScoresButton = createElement('button', { className: 'secondary-button', text: 'Refresh Scores', attributes: { type: 'button' } });
+      refreshScoresButton.disabled = inFlight;
+      refreshScoresButton.addEventListener('click', () => refreshScores());
+      actions.appendChild(refreshScoresButton);
+    }
     const allGamesFinal = displayedGamesAreFinal(weekData.games || []);
     if (week.status === 'open') {
       const gradeButton = createElement('button', {
@@ -360,6 +366,26 @@ export function createManagerWeekView() {
       const result = await managerAction('manager.week.grade', { weekId: weekData.week.weekId });
       weekData = { ...weekData, grading: result.data.grading };
       message.textContent = regrade ? 'Week regraded.' : 'Week graded.';
+      render();
+    } catch (error) {
+      message.textContent = error.message;
+      message.classList.add('error-text');
+    } finally {
+      setInFlight(false);
+      render();
+    }
+  }
+
+  async function refreshScores() {
+    if (inFlight || !weekData || !weekData.week || (weekData.week.provider || weekData.provider) !== 'odds' || weekData.week.status === 'archived') return;
+    setInFlight(true);
+    message.textContent = 'Refreshing scores...';
+    message.classList.remove('error-text');
+    try {
+      const result = await managerAction('manager.week.refreshScores', { weekId: weekData.week.weekId });
+      weekData = result.data;
+      const review = Number(result.data.reviewRequiredGames || 0);
+      message.textContent = `Scores refreshed. ${result.data.updatedGames} games updated.${review ? ` ${review} need review.` : ''}`;
       render();
     } catch (error) {
       message.textContent = error.message;
