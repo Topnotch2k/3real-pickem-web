@@ -47,6 +47,12 @@ function displayedGamesAreFinal(games) {
   return Array.isArray(games) && games.length > 0 && games.every((game) => game.status === 'final');
 }
 
+function seasonTypeLabel(value) {
+  if (value === 'preseason') return 'Preseason';
+  if (value === 'postseason') return 'Postseason';
+  return 'Regular Season';
+}
+
 export function createManagerWeekView() {
   let weekData = null;
   let inFlight = false;
@@ -57,6 +63,15 @@ export function createManagerWeekView() {
   const seasonInput = createElement('input', {
     attributes: { name: 'season', type: 'number', min: '2000', max: '9999', step: '1', required: 'required' },
   });
+  const seasonTypeSelect = createElement('select', { attributes: { name: 'seasonType' } });
+  [
+    ['preseason', 'Preseason'],
+    ['regular', 'Regular Season'],
+    ['postseason', 'Postseason'],
+  ].forEach(([value, label]) => {
+    seasonTypeSelect.appendChild(createElement('option', { text: label, attributes: { value } }));
+  });
+  seasonTypeSelect.value = 'regular';
   const weekInput = createElement('input', {
     attributes: { name: 'nflWeek', type: 'number', min: '1', max: '25', step: '1', required: 'required' },
   });
@@ -68,6 +83,7 @@ export function createManagerWeekView() {
   function setInFlight(value) {
     inFlight = value;
     seasonInput.disabled = value;
+    seasonTypeSelect.disabled = value;
     weekInput.disabled = value;
     importButton.disabled = value;
     backButton.disabled = value;
@@ -92,11 +108,13 @@ export function createManagerWeekView() {
 
     const week = weekData.week;
     seasonInput.value = String(week.season);
+    seasonTypeSelect.value = week.seasonType || 'regular';
     weekInput.value = String(week.nflWeek);
     importButton.textContent = 'Refresh Schedule';
     const details = createElement('dl', { className: 'player-meta' });
     [
       ['Season', String(week.season)],
+      ['Season type', seasonTypeLabel(week.seasonType)],
       ['NFL week', String(week.nflWeek)],
       ['Opens', formatDateTime(week.opensAt)],
       ['Thursday lock', formatDateTime(week.thursdayLockAt, 'No Thursday lock')],
@@ -361,6 +379,7 @@ export function createManagerWeekView() {
     try {
       const result = await managerAction('manager.week.importSchedule', {
         season: Number(seasonInput.value),
+        seasonType: seasonTypeSelect.value,
         nflWeek: Number(weekInput.value),
       });
       weekData = result.data;
@@ -377,7 +396,7 @@ export function createManagerWeekView() {
   backButton.addEventListener('click', () => navigateTo('manager-dashboard'));
 
   appendChildren(formButtons, [importButton, backButton]);
-  appendChildren(form, [createField('Season', seasonInput), createField('NFL week', weekInput), formButtons, message]);
+  appendChildren(form, [createField('Season', seasonInput), createField('Season Type', seasonTypeSelect), createField('NFL week', weekInput), formButtons, message]);
   appendChildren(controlsCard, [
     createElement('p', { className: 'eyebrow', text: 'League Manager' }),
     createElement('h1', { text: 'Week Management' }),
