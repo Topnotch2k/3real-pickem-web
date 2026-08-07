@@ -169,8 +169,6 @@ export function createManagerWeekView() {
     const details = createElement('dl', { className: 'player-meta' });
     [
       ['Season', String(week.season)],
-      ['Season type', seasonTypeLabel(week.seasonType)],
-      ['NFL week', String(week.nflWeek)],
       ['Opens', formatDateTime(week.opensAt)],
       ['Total games', String(weekData.gameCount || 0)],
     ].forEach(([label, value]) => {
@@ -279,7 +277,7 @@ export function createManagerWeekView() {
 
     appendChildren(detailCard, [
       createElement('p', { className: 'eyebrow', text: 'Current Week' }),
-      createElement('h2', { text: `Season ${week.season} - Week ${week.nflWeek}` }),
+      createElement('h2', { text: `${seasonTypeLabel(week.seasonType)} Week ${week.nflWeek}` }),
       createElement('span', { className: `status-pill ${week.status === 'open' ? '' : 'status-pill-muted'}`, text: week.status }),
       details,
       actions,
