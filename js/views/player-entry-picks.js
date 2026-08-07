@@ -229,8 +229,6 @@ export function createPlayerEntryPicksView() {
       ['Entry', state.entry.entryLabel || 'Entry'],
       ['Week', `Season ${state.week.season} - Week ${state.week.nflWeek}`],
       ['Progress', `${progress.completed} of ${progress.total} picks completed`],
-      ['Thursday lock', formatDateTime(state.week.thursdayLockAt)],
-      ['Main lock', formatDateTime(state.week.mainLockAt)],
     ].forEach(([label, value]) => {
       details.appendChild(createElement('dt', { text: label }));
       details.appendChild(createElement('dd', { text: value }));
