@@ -82,6 +82,12 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+function seasonTypeLabel(value) {
+  if (value === 'preseason') return 'Preseason';
+  if (value === 'postseason') return 'Postseason';
+  return 'Regular Season';
+}
+
 function referralStatusLabel(status) {
   return {
     registered: 'Registered',
@@ -744,7 +750,7 @@ function createEntrySheetsCard(bootstrapRequest) {
       const entryCard = createElement('article', { className: 'player-card' });
       const details = createElement('dl', { className: 'player-meta' });
       [
-        ['Week', `Season ${data.week.season} - Week ${data.week.nflWeek}`],
+        ['Week', `Season ${data.week.season} - ${seasonTypeLabel(data.week.seasonType)} Week ${data.week.nflWeek}`],
         ['Progress', `${entry.completedPicks} of ${entry.totalGames} picks completed`],
       ].forEach(([label, value]) => {
         details.appendChild(createElement('dt', { text: label }));
@@ -784,7 +790,7 @@ function createEntrySheetsCard(bootstrapRequest) {
         const entryCard = createElement('article', { className: 'player-card' });
         const details = createElement('dl', { className: 'player-meta' });
         [
-          ['Week', `Season ${entry.week.season} - Week ${entry.week.nflWeek}`],
+          ['Week', `Season ${entry.week.season} - ${seasonTypeLabel(entry.week.seasonType)} Week ${entry.week.nflWeek}`],
           ['Score', `${entry.result.regularPoints} of ${entry.result.totalGames}`],
           ['Rank', String(entry.result.rank)],
           ['Graded', formatDateTime(entry.result.gradedAt)],
