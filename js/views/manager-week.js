@@ -36,6 +36,16 @@ function formatDateTime(value, fallback = 'Not configured') {
   }).format(date);
 }
 
+function formatWeekday(value, fallback = 'Not available') {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    timeZone: 'America/Chicago',
+  }).format(date);
+}
+
 function parseGameScore(input) {
   const value = input.value.trim();
   if (!/^\d+$/.test(value)) return null;
@@ -117,10 +127,6 @@ export function createManagerWeekView() {
       ['Season type', seasonTypeLabel(week.seasonType)],
       ['NFL week', String(week.nflWeek)],
       ['Opens', formatDateTime(week.opensAt)],
-      ['Thursday lock', formatDateTime(week.thursdayLockAt, 'No Thursday lock')],
-      ['Main lock', formatDateTime(week.mainLockAt)],
-      ['Reveal', formatDateTime(week.revealAt)],
-      ['Provider', week.provider || weekData.provider || 'Not available'],
       ['Total games', String(weekData.gameCount || 0)],
     ].forEach(([label, value]) => {
       details.appendChild(createElement('dt', { text: label }));
@@ -167,9 +173,9 @@ export function createManagerWeekView() {
       const gameCard = createElement('article', { className: 'player-card' });
       const gameDetails = createElement('dl', { className: 'player-meta' });
       [
+        ['Day', formatWeekday(game.kickoffAt)],
         ['Kickoff', formatDateTime(game.kickoffAt)],
-        ['Lock group', game.lockGroup],
-        ['Source', game.sourceProvider],
+        ['Locks', formatDateTime(game.lockAt, 'Not available')],
       ].forEach(([label, value]) => {
         gameDetails.appendChild(createElement('dt', { text: label }));
         gameDetails.appendChild(createElement('dd', { text: value || 'Not available' }));
