@@ -38,9 +38,16 @@ function actorConfig(actor) {
       };
 }
 
+function seasonTypeLabel(value) {
+  if (value === 'preseason') return 'Preseason';
+  if (value === 'postseason') return 'Postseason';
+  return 'Regular Season';
+}
+
 function weekLabel(week) {
-  if (week.current) return `Current - Week ${week.nflWeek}`;
-  return `${week.season} - Week ${week.nflWeek}`;
+  const label = `${seasonTypeLabel(week.seasonType)} Week ${week.nflWeek}`;
+  if (week.current) return `Current - ${label}`;
+  return `${week.season} - ${label}`;
 }
 
 function displayValue(value) {
