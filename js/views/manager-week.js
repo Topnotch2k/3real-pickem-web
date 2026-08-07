@@ -63,6 +63,51 @@ function seasonTypeLabel(value) {
   return 'Regular Season';
 }
 
+const MANAGER_WEEK_SELECTION_KEY = '3real_pickem_manager_week_selection';
+const SEASON_TYPES = new Set(['preseason', 'regular', 'postseason']);
+
+function validWeekSelection(selection) {
+  if (!selection || typeof selection !== 'object' || Array.isArray(selection)) return null;
+  const season = Number(selection.season);
+  const seasonType = String(selection.seasonType || '').trim().toLowerCase();
+  const nflWeek = Number(selection.nflWeek);
+  if (!Number.isSafeInteger(season) || season < 2000 || season > 9999) return null;
+  if (!SEASON_TYPES.has(seasonType)) return null;
+  if (!Number.isSafeInteger(nflWeek) || nflWeek < 1 || nflWeek > 25) return null;
+  return { season, seasonType, nflWeek };
+}
+
+function readRememberedWeekSelection() {
+  try {
+    const raw = window.sessionStorage.getItem(MANAGER_WEEK_SELECTION_KEY);
+    if (!raw) return null;
+    const selection = validWeekSelection(JSON.parse(raw));
+    if (selection) return selection;
+  } catch (error) {
+    // Invalid or unavailable session storage should not block Week Management.
+  }
+  clearRememberedWeekSelection();
+  return null;
+}
+
+function clearRememberedWeekSelection() {
+  try {
+    window.sessionStorage.removeItem(MANAGER_WEEK_SELECTION_KEY);
+  } catch (error) {
+    // Storage cleanup is best-effort.
+  }
+}
+
+function rememberWeekSelection(week) {
+  const selection = validWeekSelection(week);
+  if (!selection) return;
+  try {
+    window.sessionStorage.setItem(MANAGER_WEEK_SELECTION_KEY, JSON.stringify(selection));
+  } catch (error) {
+    // Storage persistence must never affect Week Management behavior.
+  }
+}
+
 export function createManagerWeekView() {
   let weekData = null;
   let inFlight = false;
@@ -274,10 +319,22 @@ export function createManagerWeekView() {
     return section;
   }
 
-  async function loadWeek() {
+  async function loadWeek(options = {}) {
+    const rememberedSelection = options.restoreRemembered ? readRememberedWeekSelection() : null;
     try {
-      const result = await managerAction('manager.week.get');
+      const result = await managerAction('manager.week.get', rememberedSelection || {});
       weekData = result.data;
+      if (rememberedSelection && (!weekData || !weekData.week)) {
+        clearRememberedWeekSelection();
+        const fallback = await managerAction('manager.week.get');
+        weekData = fallback.data;
+        rememberWeekSelection(weekData && weekData.week);
+        message.textContent = '';
+        message.classList.remove('error-text');
+        render();
+        return;
+      }
+      rememberWeekSelection(weekData && weekData.week);
       message.textContent = '';
       message.classList.remove('error-text');
       render();
@@ -296,6 +353,7 @@ export function createManagerWeekView() {
     try {
       const result = await managerAction('manager.week.open', { weekId: weekData.week.weekId });
       weekData = result.data;
+      rememberWeekSelection(weekData && weekData.week);
       message.textContent = 'Week opened.';
       render();
     } catch (error) {
@@ -330,6 +388,7 @@ export function createManagerWeekView() {
         homeScore,
       });
       weekData = result.data;
+      rememberWeekSelection(weekData && weekData.week);
       message.textContent = correction ? 'Final game result corrected.' : 'Final game result saved.';
       render();
     } catch (error) {
@@ -350,6 +409,7 @@ export function createManagerWeekView() {
     try {
       const result = await managerAction('manager.week.archive', { weekId: weekData.week.weekId });
       weekData = result.data;
+      rememberWeekSelection(weekData && weekData.week);
       message.textContent = result.data.archived ? 'Week archived.' : 'Week was already archived.';
       render();
     } catch (error) {
@@ -371,6 +431,7 @@ export function createManagerWeekView() {
     try {
       const result = await managerAction('manager.week.grade', { weekId: weekData.week.weekId });
       weekData = { ...weekData, grading: result.data.grading };
+      rememberWeekSelection(weekData && weekData.week);
       message.textContent = regrade ? 'Week regraded.' : 'Week graded.';
       render();
     } catch (error) {
@@ -390,6 +451,7 @@ export function createManagerWeekView() {
     try {
       const result = await managerAction('manager.week.refreshScores', { weekId: weekData.week.weekId });
       weekData = result.data;
+      rememberWeekSelection(weekData && weekData.week);
       const review = Number(result.data.reviewRequiredGames || 0);
       message.textContent = `Scores refreshed. ${result.data.updatedGames} games updated.${review ? ` ${review} need review.` : ''}`;
       render();
@@ -415,6 +477,7 @@ export function createManagerWeekView() {
         nflWeek: Number(weekInput.value),
       });
       weekData = result.data;
+      rememberWeekSelection(weekData && weekData.week);
       message.textContent = `Schedule imported. ${result.data.createdGames} games created and ${result.data.updatedGames} games updated.`;
       render();
     } catch (error) {
@@ -437,6 +500,6 @@ export function createManagerWeekView() {
   ]);
   appendChildren(wrapper, [controlsCard, detailCard]);
   render();
-  loadWeek();
+  loadWeek({ restoreRemembered: true });
   return wrapper;
 }
