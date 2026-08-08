@@ -45,7 +45,7 @@ export function createPlayerEntryPicksView() {
   let saveBlocked = false;
   let entryAvailable = Boolean(entryId);
 
-  const wrapper = createElement('main', { className: 'page-container narrow-page' });
+  const wrapper = createElement('main', { className: 'page-container pick-sheet-page' });
   const header = createElement('section', { className: 'state-card' });
   const content = createElement('section', { className: 'pick-game-list', attributes: { 'aria-label': 'Weekly games' } });
   const message = createElement('p', {
@@ -151,7 +151,14 @@ export function createPlayerEntryPicksView() {
     return fieldset;
   }
 
-  function gameDetailLines(game, selected) {
+  function gameStatusPill(game) {
+    return createElement('span', {
+      className: `status-pill ${game.editable ? '' : 'status-pill-muted'}`,
+      text: game.editable ? 'Editable' : 'Locked',
+    });
+  }
+
+  function gameMetaLines(game, selected) {
     const savedPick = selected[game.gameId] || '';
     const finalResultLines = game.status === 'final'
       ? [
@@ -160,7 +167,6 @@ export function createPlayerEntryPicksView() {
         ]
       : [];
     return [
-      createElement('span', { className: `status-pill ${game.editable ? '' : 'status-pill-muted'}`, text: game.editable ? 'Editable' : 'Locked' }),
       createElement('p', { className: 'muted', text: `Kickoff: ${formatDateTime(game.kickoffAt)}` }),
       createElement('p', { className: 'muted', text: `Locks: ${formatDateTime(game.lockAt)}` }),
       ...(game.awayScore !== '' && game.homeScore !== '' ? [createElement('p', {
@@ -173,8 +179,13 @@ export function createPlayerEntryPicksView() {
 
   function createGameCard(game, selected) {
     const card = createElement('article', { className: 'player-card pick-game-card' });
+    const header = createElement('div', { className: 'pick-game-card-header' });
+    const meta = createElement('div', { className: 'pick-game-meta' });
+    header.appendChild(gameStatusPill(game));
+    appendChildren(meta, gameMetaLines(game, selected));
     appendChildren(card, [
-      ...gameDetailLines(game, selected),
+      header,
+      meta,
       createPickControls(game, selected),
     ]);
     return card;
@@ -205,7 +216,8 @@ export function createPlayerEntryPicksView() {
     appendChildren(card, [
       createElement('p', { className: 'eyebrow', text: 'Tiebreaker' }),
       createElement('h3', { className: 'tiebreaker-matchup', text: `${game.awayTeam} at ${game.homeTeam}` }),
-      ...gameDetailLines(game, selected),
+      gameStatusPill(game),
+      appendChildren(createElement('div', { className: 'pick-game-meta' }), gameMetaLines(game, selected)),
       createPickControls(game, selected),
       tiebreakerField,
     ]);

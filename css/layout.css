@@ -348,6 +348,10 @@ h1 {
   max-width: 720px;
 }
 
+.pick-sheet-page {
+  max-width: 72rem;
+}
+
 .player-dashboard-card {
   display: grid;
   gap: var(--space-3);
@@ -443,6 +447,36 @@ h1 {
   display: grid;
   gap: var(--space-4);
   margin-top: var(--space-4);
+}
+
+.pick-game-list > .state-card,
+.pick-game-list > .tiebreaker-panel {
+  grid-column: 1 / -1;
+}
+
+.pick-game-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.pick-game-card-header h3 {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-gold-soft);
+  overflow-wrap: anywhere;
+}
+
+.pick-game-meta {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.pick-game-meta .muted,
+.pick-game-meta .status-pill {
+  margin: 0;
 }
 
 .tiebreaker-panel {
@@ -677,6 +711,10 @@ thead .picks-board-sticky {
 }
 
 @media (min-width: 720px) {
+  .pick-game-list {
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  }
+
   .pick-team-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
