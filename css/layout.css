@@ -181,6 +181,26 @@ h1 {
   gap: var(--space-3);
 }
 
+.picks-board-actions {
+  display: grid;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.picks-board-pot {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.picks-board-pot .eyebrow {
+  margin: 0;
+}
+
+.picks-board-pot .status-pill {
+  width: max-content;
+}
+
 .week-controls .button-row {
   margin-top: 0;
 }
@@ -321,6 +341,11 @@ h1 {
   .manager-controls {
     grid-template-columns: minmax(12rem, 1fr) minmax(10rem, 14rem) auto auto;
     align-items: center;
+  }
+
+  .picks-board-controls {
+    grid-template-columns: minmax(12rem, 1fr) minmax(10rem, 14rem);
+    align-items: end;
   }
 
   .week-controls {

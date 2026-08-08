@@ -65,6 +65,15 @@ function formatPercent(value) {
   return `${Number.isInteger(number) ? number : Number(number.toFixed(2))}%`;
 }
 
+function formatMoney(cents) {
+  const number = Number(cents);
+  if (!Number.isFinite(number)) return '$0.00';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(number / 100);
+}
+
 function gameIsFinal(game) {
   return String(game && game.status || '').toLowerCase() === 'final';
 }
@@ -312,6 +321,17 @@ function renderLeaderboard(data, activeTab, setActiveTab) {
   return section;
 }
 
+function renderCurrentPot(data) {
+  const pot = data && data.currentPot;
+  if (!pot || pot.visible !== true) return null;
+  const panel = createElement('div', { className: 'picks-board-pot' });
+  appendChildren(panel, [
+    createElement('span', { className: 'eyebrow', text: 'Current Pot' }),
+    createElement('span', { className: 'status-pill', text: formatMoney(pot.amountCents) }),
+  ]);
+  return panel;
+}
+
 export function createEverybodysPicksView({ actor = 'player' } = {}) {
   const config = actorConfig(actor);
   let boardData = null;
@@ -319,8 +339,9 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
   let activeLeaderboardTab = 'weekly';
   const wrapper = createElement('main', { className: 'page-container' });
   const header = createElement('section', { className: 'state-card manager-toolbar' });
-  const controls = createElement('div', { className: 'manager-controls' });
+  const controls = createElement('div', { className: 'manager-controls picks-board-controls' });
   const weekSelect = createElement('select', { attributes: { name: 'weekId' } });
+  const actions = createElement('div', { className: 'picks-board-actions' });
   const back = createElement('button', { className: 'secondary-button', text: config.backText, attributes: { type: 'button' } });
   const message = createElement('p', {
     className: 'muted',
@@ -348,6 +369,10 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
 
   function render() {
     renderWeekOptions();
+    actions.replaceChildren();
+    const currentPot = renderCurrentPot(boardData || {});
+    if (currentPot) actions.appendChild(currentPot);
+    actions.appendChild(back);
     leadersRegion.replaceChildren(renderLeagueLeaders(boardData || {}));
     leaderboardRegion.replaceChildren(renderLeaderboard(boardData || {}, activeLeaderboardTab, (tab) => {
       activeLeaderboardTab = tab;
@@ -387,10 +412,11 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     loadBoard(weekSelect.value);
   });
   back.addEventListener('click', () => navigateTo(config.backRoute));
+  actions.appendChild(back);
 
   appendChildren(controls, [
     createField('Week', weekSelect),
-    back,
+    actions,
   ]);
   appendChildren(header, [
     createElement('p', { className: 'eyebrow', text: 'Picks' }),
