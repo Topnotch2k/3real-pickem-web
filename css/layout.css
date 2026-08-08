@@ -395,6 +395,21 @@ h1 {
   gap: var(--space-4);
 }
 
+.player-dashboard-grid .player-list,
+.player-dashboard-grid .player-card {
+  min-width: 0;
+}
+
+.player-dashboard-grid .player-card-header {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.player-dashboard-grid .player-card-header h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .referral-reward-list {
   display: grid;
   gap: var(--space-1);
@@ -685,5 +700,9 @@ thead .picks-board-sticky {
   .player-dashboard-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+  }
+
+  .player-dashboard-grid .player-list {
+    grid-template-columns: 1fr;
   }
 }
