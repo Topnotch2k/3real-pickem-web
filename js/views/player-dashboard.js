@@ -921,9 +921,12 @@ export function createPlayerDashboardView(context = {}) {
   const wrapper = createElement('main', { className: 'page-container' });
   const card = createElement('section', { className: 'state-card compact-card player-dashboard-card' });
   const summary = createElement('div', { className: 'player-dashboard-summary' });
-  const identity = createElement('div');
+  const summaryIntro = createElement('div', { className: 'player-dashboard-summary-intro' });
+  const identity = createElement('div', { className: 'player-dashboard-summary-identity' });
+  const actions = createElement('div', { className: 'player-dashboard-summary-actions' });
   const avatar = createElement('span', { className: 'player-avatar large-avatar', text: player.avatar || 'football' });
   const status = createElement('span', { className: 'status-pill', text: player.status || 'active' });
+  const accent = createElement('span', { className: 'player-dashboard-accent', text: '🏈' });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
   const dashboardGrid = createElement('section', { className: 'player-dashboard-grid' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
@@ -937,11 +940,16 @@ export function createPlayerDashboardView(context = {}) {
     navigateTo('player-login');
   });
 
+  appendChildren(summaryIntro, [
+    createElement('p', { className: 'eyebrow', text: 'Player Dashboard' }),
+    avatar,
+  ]);
   appendChildren(identity, [
-    createElement('h2', { text: player.displayName || 'Player' }),
+    createElement('h2', { text: `Welcome back, ${player.displayName || 'Player'}` }),
     status,
   ]);
-  appendChildren(summary, [avatar, identity, logout]);
+  appendChildren(actions, [accent, logout]);
+  appendChildren(summary, [summaryIntro, identity, actions]);
   appendChildren(dashboardGrid, [
     paymentWorkspace.requestCard,
     paymentWorkspace.historyCard,
@@ -949,7 +957,6 @@ export function createPlayerDashboardView(context = {}) {
     inviteFriends.card,
   ]);
   appendChildren(card, [
-    createElement('p', { className: 'eyebrow', text: 'Player Dashboard' }),
     summary,
   ]);
   appendChildren(wrapper, [

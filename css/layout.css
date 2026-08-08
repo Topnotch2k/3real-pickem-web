@@ -354,19 +354,40 @@ h1 {
 }
 
 .player-dashboard-summary {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.player-dashboard-summary-intro,
+.player-dashboard-summary-actions {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
+}
+
+.player-dashboard-summary-intro {
+  flex-wrap: wrap;
+}
+
+.player-dashboard-summary-actions {
+  justify-content: flex-start;
 }
 
 .player-dashboard-summary h2 {
   margin: 0 0 var(--space-1);
   color: var(--color-gold-soft);
+  overflow-wrap: anywhere;
 }
 
-.player-dashboard-summary .secondary-button {
-  margin-left: auto;
+.player-dashboard-summary-identity {
+  min-width: 0;
+}
+
+.player-dashboard-accent {
+  color: var(--color-gold-soft);
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .player-dashboard-grid {
@@ -624,6 +645,20 @@ thead .picks-board-sticky {
 }
 
 @media (min-width: 900px) {
+  .player-dashboard-summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .player-dashboard-summary-identity {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .player-dashboard-summary-actions {
+    justify-content: flex-end;
+  }
+
   .player-dashboard-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
