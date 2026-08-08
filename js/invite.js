@@ -1,25 +1,41 @@
 export const INVITE_SHARE_TEXT = "Join my 3Real Pick'em league. Create your profile and save your PIN.";
 
-export function captureInviteParamsFromHash() {
+const INVITE_PARAM_NAMES = ['invite', 'ref', 'i'];
+
+function inviteParamsFromLocation() {
   const hash = window.location.hash || '';
-  const queryIndex = hash.indexOf('?');
-  if (queryIndex === -1) {
-    return { inviteToken: '', referralCode: '', inviteCode: '' };
-  }
-  const params = new URLSearchParams(hash.slice(queryIndex + 1));
+  const hashQueryIndex = hash.indexOf('?');
+  const searchParams = new URLSearchParams(window.location.search || '');
+  const hashParams = hashQueryIndex === -1
+    ? new URLSearchParams()
+    : new URLSearchParams(hash.slice(hashQueryIndex + 1));
+  return { searchParams, hashParams, hashQueryIndex, hash };
+}
+
+export function captureInviteParamsFromHash() {
+  const { searchParams, hashParams } = inviteParamsFromLocation();
+  const value = (name) => hashParams.get(name) || searchParams.get(name) || '';
   return {
-    inviteToken: params.get('invite') || '',
-    referralCode: params.get('ref') || '',
-    inviteCode: params.get('i') || '',
+    inviteToken: value('invite'),
+    referralCode: value('ref'),
+    inviteCode: value('i'),
   };
 }
 
 export function clearInviteParamsFromHash() {
-  const hash = window.location.hash || '';
-  if (!hash.startsWith('#/player-register') || !hash.includes('?')) {
+  const { searchParams, hashParams, hashQueryIndex, hash } = inviteParamsFromLocation();
+  if (!hash.startsWith('#/player-register')) {
     return;
   }
-  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/player-register`);
+  INVITE_PARAM_NAMES.forEach((name) => {
+    searchParams.delete(name);
+    hashParams.delete(name);
+  });
+  const nextSearch = searchParams.toString();
+  const hashRoute = hashQueryIndex === -1 ? hash : hash.slice(0, hashQueryIndex);
+  const nextHashQuery = hashParams.toString();
+  const nextHash = `${hashRoute}${nextHashQuery ? `?${nextHashQuery}` : ''}`;
+  window.history.replaceState(null, '', `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${nextHash}`);
 }
 
 export function buildInviteLink(inviteToken, referralCode = '') {
