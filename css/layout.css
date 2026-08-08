@@ -218,6 +218,7 @@ h1 {
 
 .dashboard-payment-form {
   gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .dashboard-payment-form .muted,
@@ -348,6 +349,27 @@ h1 {
 }
 
 .player-dashboard-card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.player-dashboard-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.player-dashboard-summary h2 {
+  margin: 0 0 var(--space-1);
+  color: var(--color-gold-soft);
+}
+
+.player-dashboard-summary .secondary-button {
+  margin-left: auto;
+}
+
+.player-dashboard-grid {
   display: grid;
   gap: var(--space-4);
 }
@@ -598,5 +620,12 @@ thead .picks-board-sticky {
 @media (min-width: 720px) {
   .pick-team-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .player-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
 }

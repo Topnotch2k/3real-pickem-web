@@ -920,24 +920,16 @@ export function createPlayerDashboardView(context = {}) {
   const player = context.player || {};
   const wrapper = createElement('main', { className: 'page-container' });
   const card = createElement('section', { className: 'state-card compact-card player-dashboard-card' });
+  const summary = createElement('div', { className: 'player-dashboard-summary' });
+  const identity = createElement('div');
   const avatar = createElement('span', { className: 'player-avatar large-avatar', text: player.avatar || 'football' });
   const status = createElement('span', { className: 'status-pill', text: player.status || 'active' });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
-  const details = createElement('dl', { className: 'player-meta' });
+  const dashboardGrid = createElement('section', { className: 'player-dashboard-grid' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
   const entrySheets = createEntrySheetsCard(bootstrapRequest);
   const inviteFriends = createInviteFriendsCard(player, bootstrapRequest);
   const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends);
-
-  [
-    ['Profile', 'Active'],
-    ['Payment requests', 'View and submit below'],
-    ['Payment methods', 'Cash, Cash App, or Apple Pay through the manager'],
-    ['Entry sheets', 'Make and edit weekly picks below'],
-  ].forEach(([label, value]) => {
-    details.appendChild(createElement('dt', { text: label }));
-    details.appendChild(createElement('dd', { text: value }));
-  });
 
   logout.addEventListener('click', async () => {
     logout.disabled = true;
@@ -945,21 +937,24 @@ export function createPlayerDashboardView(context = {}) {
     navigateTo('player-login');
   });
 
-  appendChildren(card, [
-    createElement('p', { className: 'eyebrow', text: 'Player Dashboard' }),
-    avatar,
-    createElement('h1', { text: `Welcome, ${player.displayName || 'Player'}` }),
+  appendChildren(identity, [
+    createElement('h2', { text: player.displayName || 'Player' }),
     status,
-    createElement('p', { className: 'muted', text: 'Submit payment requests, manage approved entry sheets, and make weekly picks below.' }),
-    details,
-    logout,
   ]);
-  appendChildren(wrapper, [
-    card,
+  appendChildren(summary, [avatar, identity, logout]);
+  appendChildren(dashboardGrid, [
     paymentWorkspace.requestCard,
     paymentWorkspace.historyCard,
     entrySheets.card,
     inviteFriends.card,
+  ]);
+  appendChildren(card, [
+    createElement('p', { className: 'eyebrow', text: 'Player Dashboard' }),
+    summary,
+  ]);
+  appendChildren(wrapper, [
+    card,
+    dashboardGrid,
   ]);
   return wrapper;
 }
