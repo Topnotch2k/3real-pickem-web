@@ -29,6 +29,24 @@ function createField(labelText, input) {
   return label;
 }
 
+function createVisibilityToggle(input, labelText) {
+  const button = createElement('button', {
+    className: 'secondary-button password-toggle-button',
+    text: 'Show',
+    attributes: {
+      type: 'button',
+      'aria-label': `Show ${labelText}`,
+    },
+  });
+  button.addEventListener('click', () => {
+    const visible = input.getAttribute('type') === 'text';
+    input.setAttribute('type', visible ? 'password' : 'text');
+    button.textContent = visible ? 'Show' : 'Hide';
+    button.setAttribute('aria-label', `${visible ? 'Show' : 'Hide'} ${labelText}`);
+  });
+  return button;
+}
+
 export function createManagerLoginView() {
   const wrapper = createElement('main', { className: 'page-container auth-page' });
   const card = createElement('section', { className: 'state-card auth-card' });
@@ -51,6 +69,8 @@ export function createManagerLoginView() {
       required: 'required',
     },
   });
+  const passwordRow = createElement('div', { className: 'password-input-row' });
+  appendChildren(passwordRow, [passwordInput, createVisibilityToggle(passwordInput, 'password')]);
   const submit = createElement('button', {
     className: 'primary-button full-width-button',
     text: 'Log In',
@@ -63,7 +83,7 @@ export function createManagerLoginView() {
 
   appendChildren(form, [
     createField('Username or email', identifierInput),
-    createField('Password', passwordInput),
+    createField('Password', passwordRow),
     submit,
     error,
   ]);

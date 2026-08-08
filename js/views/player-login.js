@@ -29,6 +29,24 @@ function createField(labelText, control) {
   return label;
 }
 
+function createVisibilityToggle(input, labelText) {
+  const button = createElement('button', {
+    className: 'secondary-button password-toggle-button',
+    text: 'Show',
+    attributes: {
+      type: 'button',
+      'aria-label': `Show ${labelText}`,
+    },
+  });
+  button.addEventListener('click', () => {
+    const visible = input.getAttribute('type') === 'text';
+    input.setAttribute('type', visible ? 'password' : 'text');
+    button.textContent = visible ? 'Show' : 'Hide';
+    button.setAttribute('aria-label', `${visible ? 'Show' : 'Hide'} ${labelText}`);
+  });
+  return button;
+}
+
 export function createPlayerLoginView() {
   const wrapper = createElement('main', { className: 'page-container narrow-page' });
   const card = createElement('section', { className: 'state-card' });
@@ -52,6 +70,8 @@ export function createPlayerLoginView() {
       required: 'required',
     },
   });
+  const pinRow = createElement('div', { className: 'password-input-row' });
+  appendChildren(pinRow, [pinInput, createVisibilityToggle(pinInput, 'PIN')]);
   const message = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const buttons = createElement('div', { className: 'button-row' });
   const submit = createElement('button', { className: 'primary-button', text: 'Player Login', attributes: { type: 'submit' } });
@@ -61,7 +81,7 @@ export function createPlayerLoginView() {
   appendChildren(buttons, [submit, register]);
   appendChildren(form, [
     createField('Display name', nameInput),
-    createField('4-digit PIN', pinInput),
+    createField('4-digit PIN', pinRow),
     buttons,
     message,
   ]);
