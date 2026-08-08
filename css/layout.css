@@ -219,6 +219,103 @@ h1 {
   text-transform: uppercase;
 }
 
+.weekly-results-shell {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.weekly-results-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.weekly-results-card,
+.weekly-results-prize {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  border: 1px solid rgba(217, 173, 50, 0.55);
+  border-radius: var(--radius-lg);
+  background: rgba(7, 9, 7, 0.86);
+  padding: var(--space-4);
+}
+
+.weekly-results-champion {
+  border-color: var(--color-gold);
+  text-align: center;
+}
+
+.weekly-results-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.weekly-results-card-header .eyebrow {
+  margin: 0;
+}
+
+.weekly-results-trophy {
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  line-height: 1;
+}
+
+.weekly-results-player {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: inherit;
+  min-width: 0;
+}
+
+.weekly-results-player h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.weekly-results-score {
+  margin: 0;
+  color: var(--color-gold-soft);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.weekly-results-score-large {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 5vw, 2rem);
+}
+
+.weekly-results-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  justify-content: inherit;
+}
+
+.weekly-results-prize {
+  justify-items: center;
+  text-align: center;
+}
+
+.weekly-results-prize .eyebrow {
+  margin: 0;
+}
+
+.weekly-results-prize-amount {
+  margin: 0;
+  color: var(--color-gold-soft);
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.weekly-results-podium {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .week-controls .button-row {
   margin-top: 0;
 }
@@ -700,6 +797,10 @@ h1 {
 @media (min-width: 64rem) {
   .league-leaders-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .weekly-results-podium {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

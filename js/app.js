@@ -1,16 +1,17 @@
-import { APP_CONFIG } from './config.js?v=20260807-3';
-import { requestAction } from './api.js?v=20260807-3';
-import { registerRoute, startRouter } from './router.js?v=20260807-3';
-import { createManagerLoginView } from './views/manager-login.js?v=20260807-3';
-import { createManagerDashboardView } from './views/manager-dashboard.js?v=20260807-3';
-import { createManagerPlayersView } from './views/manager-players.js?v=20260807-3';
-import { createManagerPaymentsView } from './views/manager-payments.js?v=20260807-3';
-import { createManagerWeekView } from './views/manager-week.js?v=20260807-3';
-import { createPlayerRegisterView } from './views/player-register.js?v=20260807-3';
-import { createPlayerLoginView } from './views/player-login.js?v=20260807-3';
-import { createPlayerDashboardView } from './views/player-dashboard.js?v=20260807-3';
-import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=20260807-3';
-import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260807-3';
+import { APP_CONFIG } from './config.js?v=20260808-1';
+import { requestAction } from './api.js?v=20260808-1';
+import { registerRoute, startRouter } from './router.js?v=20260808-1';
+import { createManagerLoginView } from './views/manager-login.js?v=20260808-1';
+import { createManagerDashboardView } from './views/manager-dashboard.js?v=20260808-1';
+import { createManagerPlayersView } from './views/manager-players.js?v=20260808-1';
+import { createManagerPaymentsView } from './views/manager-payments.js?v=20260808-1';
+import { createManagerWeekView } from './views/manager-week.js?v=20260808-1';
+import { createPlayerRegisterView } from './views/player-register.js?v=20260808-1';
+import { createPlayerLoginView } from './views/player-login.js?v=20260808-1';
+import { createPlayerDashboardView } from './views/player-dashboard.js?v=20260808-1';
+import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=20260808-1';
+import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260808-1';
+import { createWeeklyResultsView } from './views/weekly-results.js?v=20260808-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -145,4 +146,5 @@ registerRoute('player-login', createPlayerLoginView);
 registerRoute('player-dashboard', createPlayerDashboardView, { requiresPlayerSession: true });
 registerRoute('player-entry-picks', createPlayerEntryPicksView, { requiresPlayerSession: true });
 registerRoute('player-everybodys-picks', () => createEverybodysPicksView({ actor: 'player' }), { requiresPlayerSession: true });
+registerRoute('player-weekly-results', createWeeklyResultsView, { requiresPlayerSession: true });
 startRouter(root);

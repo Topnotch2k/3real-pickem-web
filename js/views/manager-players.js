@@ -1,6 +1,6 @@
-import { requestAction } from '../api.js?v=20260807-3';
-import { getManagerSessionToken } from '../auth.js?v=20260807-3';
-import { navigateTo } from '../router.js?v=20260807-3';
+import { requestAction } from '../api.js?v=20260808-1';
+import { getManagerSessionToken } from '../auth.js?v=20260808-1';
+import { navigateTo } from '../router.js?v=20260808-1';
 
 const AVATARS = [
   { value: 'football', label: 'Football' },

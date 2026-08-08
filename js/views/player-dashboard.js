@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260807-3';
-import { requestAction } from '../api.js?v=20260807-3';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260807-3';
-import { navigateTo } from '../router.js?v=20260807-3';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260808-1';
+import { requestAction } from '../api.js?v=20260808-1';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260808-1';
+import { navigateTo } from '../router.js?v=20260808-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -812,11 +812,19 @@ function createEntrySheetsCard(bootstrapRequest) {
           text: 'View Results',
           attributes: { type: 'button' },
         });
+        const weeklyResults = createElement('button', {
+          className: 'secondary-button',
+          text: 'Weekly Results',
+          attributes: { type: 'button' },
+        });
         open.addEventListener('click', () => {
           navigateTo(`player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}`);
         });
+        weeklyResults.addEventListener('click', () => {
+          navigateTo(`player-weekly-results?weekId=${encodeURIComponent(entry.week.weekId)}`);
+        });
         const buttons = createElement('div', { className: 'button-row' });
-        buttons.appendChild(open);
+        appendChildren(buttons, [open, weeklyResults]);
         appendChildren(header, [
           createElement('h3', { text: entry.entryLabel || 'Entry' }),
           createElement('span', { className: 'status-pill', text: `${entry.result.regularPoints} of ${entry.result.totalGames}` }),
