@@ -327,7 +327,8 @@ function renderCurrentPot(data) {
   const panel = createElement('div', { className: 'picks-board-pot' });
   appendChildren(panel, [
     createElement('span', { className: 'eyebrow', text: 'Current Pot' }),
-    createElement('span', { className: 'status-pill', text: formatMoney(pot.amountCents) }),
+    createElement('span', { className: 'picks-board-pot-amount', text: formatMoney(pot.amountCents) }),
+    createElement('span', { className: 'picks-board-pot-caption', text: 'Prize Pool' }),
   ]);
   return panel;
 }

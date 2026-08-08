@@ -191,14 +191,32 @@ h1 {
   display: grid;
   gap: var(--space-1);
   min-width: 0;
+  justify-items: center;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-lg);
+  background: rgba(7, 9, 7, 0.88);
+  padding: var(--space-3);
+  text-align: center;
 }
 
 .picks-board-pot .eyebrow {
   margin: 0;
 }
 
-.picks-board-pot .status-pill {
-  width: max-content;
+.picks-board-pot-amount {
+  color: var(--color-gold-soft);
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 2.25rem);
+  font-weight: 900;
+  line-height: 0.95;
+}
+
+.picks-board-pot-caption {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .week-controls .button-row {
