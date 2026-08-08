@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260808-2';
-import { requestAction } from '../api.js?v=20260808-2';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260808-2';
-import { navigateTo } from '../router.js?v=20260808-2';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260808-3';
+import { requestAction } from '../api.js?v=20260808-3';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260808-3';
+import { navigateTo } from '../router.js?v=20260808-3';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -82,10 +82,36 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+function formatCentralTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unavailable';
+  }
+  const formatted = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Chicago',
+  }).format(date);
+  const parts = formatted.split(', ');
+  if (parts.length >= 3) {
+    return `${parts[0]}, ${parts[1]} · ${parts.slice(2).join(', ')} CT`;
+  }
+  return `${formatted} CT`;
+}
+
 function seasonTypeLabel(value) {
   if (value === 'preseason') return 'Preseason';
   if (value === 'postseason') return 'Postseason';
   return 'Regular Season';
+}
+
+function thisWeekLabel(week) {
+  if (!week) return '';
+  const prefix = week.seasonType === 'regular' ? '' : `${seasonTypeLabel(week.seasonType)} `;
+  return `${prefix}Week ${week.nflWeek}`;
 }
 
 function referralStatusLabel(status) {
@@ -713,6 +739,7 @@ function createEntrySheetsCard(bootstrapRequest) {
   let entrySheetFilter = 'current';
   let latestEntrySheetsData = null;
   const card = createElement('section', { className: 'state-card compact-card' });
+  card.tabIndex = -1;
   const status = createElement('p', {
     className: 'muted',
     text: 'Loading entry sheets...',
@@ -928,6 +955,75 @@ function createEntrySheetsCard(bootstrapRequest) {
   };
 }
 
+function createThisWeekHelper(bootstrapRequest, entrySheets) {
+  const card = createElement('section', { className: 'state-card compact-card this-week-helper' });
+  const body = createElement('div');
+  card.hidden = true;
+
+  function openEntrySheets() {
+    if (!entrySheets.card.isConnected) return;
+    entrySheets.card.scrollIntoView({ block: 'start' });
+    entrySheets.card.focus({ preventScroll: true });
+  }
+
+  function render(thisWeek) {
+    body.replaceChildren();
+    if (!thisWeek) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    const label = thisWeekLabel(thisWeek);
+    if (thisWeek.firstLockPassed) {
+      const header = createElement('div', { className: 'this-week-helper-header' });
+      const open = createElement('button', {
+        className: 'secondary-button',
+        text: 'Open My Entry Sheets',
+        attributes: { type: 'button' },
+      });
+      open.addEventListener('click', openEntrySheets);
+      appendChildren(header, [
+        createElement('p', { className: 'eyebrow', text: 'Games have started' }),
+        createElement('h2', { text: label }),
+      ]);
+      appendChildren(body, [
+        header,
+        createElement('p', { className: 'muted', text: 'Some picks are now locked.' }),
+        createElement('p', { className: 'muted', text: 'All times Central Time.' }),
+        appendChildren(createElement('div', { className: 'this-week-helper-action' }), [open]),
+      ]);
+      return;
+    }
+    const header = createElement('div', { className: 'this-week-helper-header' });
+    const times = createElement('dl', { className: 'player-meta this-week-helper-times' });
+    [
+      ['First game', formatCentralTime(thisWeek.firstKickoffAt)],
+      ['First pick locks', formatCentralTime(thisWeek.firstLockAt)],
+    ].forEach(([term, value]) => {
+      times.appendChild(createElement('dt', { text: term }));
+      times.appendChild(createElement('dd', { text: value }));
+    });
+    appendChildren(header, [
+      createElement('p', { className: 'eyebrow', text: 'This Week 🏈' }),
+      createElement('h2', { text: label }),
+    ]);
+    appendChildren(body, [
+      header,
+      times,
+      createElement('p', { className: 'muted', text: 'All times Central Time.' }),
+      createElement('p', { className: 'muted', text: 'Make your picks before the lock.' }),
+    ]);
+  }
+
+  card.appendChild(body);
+  playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets')
+    .then((data) => render(data.thisWeek))
+    .catch(() => {
+      card.hidden = true;
+    });
+  return card;
+}
+
 export function createPlayerDashboardView(context = {}) {
   const player = context.player || {};
   const wrapper = createElement('main', { className: 'page-container' });
@@ -943,6 +1039,7 @@ export function createPlayerDashboardView(context = {}) {
   const dashboardGrid = createElement('section', { className: 'player-dashboard-grid' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
   const entrySheets = createEntrySheetsCard(bootstrapRequest);
+  const thisWeekHelper = createThisWeekHelper(bootstrapRequest, entrySheets);
   const inviteFriends = createInviteFriendsCard(player, bootstrapRequest);
   const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends);
 
@@ -973,6 +1070,7 @@ export function createPlayerDashboardView(context = {}) {
   ]);
   appendChildren(wrapper, [
     card,
+    thisWeekHelper,
     dashboardGrid,
   ]);
   return wrapper;

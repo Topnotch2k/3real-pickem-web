@@ -624,6 +624,43 @@ h1 {
   line-height: 1;
 }
 
+.this-week-helper {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.this-week-helper[hidden] {
+  display: none;
+}
+
+.this-week-helper-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.this-week-helper-header .eyebrow,
+.this-week-helper p {
+  margin: 0;
+}
+
+.this-week-helper h2 {
+  margin: 0;
+  color: var(--color-gold-soft);
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+.this-week-helper-times {
+  gap: var(--space-1) var(--space-4);
+}
+
+.this-week-helper-action {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
 .player-dashboard-grid {
   display: grid;
   gap: var(--space-4);
