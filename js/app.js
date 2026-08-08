@@ -1,16 +1,16 @@
-import { APP_CONFIG } from './config.js';
-import { requestAction } from './api.js';
-import { registerRoute, startRouter } from './router.js';
-import { createManagerLoginView } from './views/manager-login.js';
-import { createManagerDashboardView } from './views/manager-dashboard.js';
-import { createManagerPlayersView } from './views/manager-players.js';
-import { createManagerPaymentsView } from './views/manager-payments.js';
-import { createManagerWeekView } from './views/manager-week.js';
-import { createPlayerRegisterView } from './views/player-register.js';
-import { createPlayerLoginView } from './views/player-login.js';
-import { createPlayerDashboardView } from './views/player-dashboard.js';
-import { createPlayerEntryPicksView } from './views/player-entry-picks.js';
-import { createEverybodysPicksView } from './views/everybodys-picks.js';
+import { APP_CONFIG } from './config.js?v=20260807-1';
+import { requestAction } from './api.js?v=20260807-1';
+import { registerRoute, startRouter } from './router.js?v=20260807-1';
+import { createManagerLoginView } from './views/manager-login.js?v=20260807-1';
+import { createManagerDashboardView } from './views/manager-dashboard.js?v=20260807-1';
+import { createManagerPlayersView } from './views/manager-players.js?v=20260807-1';
+import { createManagerPaymentsView } from './views/manager-payments.js?v=20260807-1';
+import { createManagerWeekView } from './views/manager-week.js?v=20260807-1';
+import { createPlayerRegisterView } from './views/player-register.js?v=20260807-1';
+import { createPlayerLoginView } from './views/player-login.js?v=20260807-1';
+import { createPlayerDashboardView } from './views/player-dashboard.js?v=20260807-1';
+import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=20260807-1';
+import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260807-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
