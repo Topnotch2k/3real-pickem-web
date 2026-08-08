@@ -216,6 +216,20 @@ h1 {
   margin: 0;
 }
 
+.dashboard-payment-form {
+  gap: var(--space-3);
+}
+
+.dashboard-payment-form .muted,
+.dashboard-payment-form .status-pill,
+.dashboard-payment-form .button-row {
+  grid-column: 1 / -1;
+}
+
+.dashboard-payment-form .button-row {
+  margin-top: 0;
+}
+
 .player-workspace {
   display: grid;
   gap: var(--space-4);
@@ -315,6 +329,11 @@ h1 {
 
   .week-score-form {
     grid-template-columns: minmax(6rem, 8rem) minmax(6rem, 8rem) auto;
+    align-items: end;
+  }
+
+  .dashboard-payment-form {
+    grid-template-columns: minmax(10rem, 1fr) minmax(8rem, 12rem);
     align-items: end;
   }
 

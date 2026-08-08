@@ -137,7 +137,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     currentBadge: '',
     nextMilestone: 10,
   };
-  const card = createElement('section', { className: 'state-card invite-card' });
+  const card = createElement('section', { className: 'state-card compact-card invite-card' });
   const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const controls = createElement('div', { className: 'button-row' });
   const referralList = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'People you invited' } });
@@ -189,7 +189,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     }
     referrals.forEach((referral) => {
       const invitee = referral.referredPlayer || {};
-      const card = createElement('article', { className: 'player-card' });
+      const card = createElement('article', { className: 'player-card compact-card' });
       const header = createElement('div', { className: 'player-card-header' });
       const avatar = createElement('span', { className: 'player-avatar', text: invitee.avatar || 'football' });
       const title = createElement('div');
@@ -225,7 +225,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
 
   function renderRewardSummary() {
     const section = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Referral reward progress' } });
-    const summaryCard = createElement('article', { className: 'player-card' });
+    const summaryCard = createElement('article', { className: 'player-card compact-card' });
     const details = createElement('dl', { className: 'player-meta' });
     [
       ['Qualified referrals', String(rewardSummary.qualifiedReferralCount || 0)],
@@ -299,8 +299,8 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   let paymentsRequest = null;
   let paymentRefreshTimeout = null;
 
-  const requestCard = createElement('section', { className: 'state-card' });
-  const form = createElement('form', { className: 'auth-form' });
+  const requestCard = createElement('section', { className: 'state-card compact-card' });
+  const form = createElement('form', { className: 'auth-form dashboard-payment-form' });
   const methodSelect = createElement('select', { attributes: { name: 'method', disabled: 'disabled' } });
   const quantitySelect = createElement('select', { attributes: { name: 'entriesPaid', disabled: 'disabled' } });
   const price = createElement('p', { className: 'muted', text: 'Loading current entry price...' });
@@ -322,7 +322,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   buttons.appendChild(submit);
   buttons.appendChild(redeemFreeEntry);
 
-  const historyCard = createElement('section', { className: 'state-card' });
+  const historyCard = createElement('section', { className: 'state-card compact-card' });
   const historyStatus = createElement('p', {
     className: 'muted',
     text: 'Loading payment requests...',
@@ -409,7 +409,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
     }
     historyStatus.textContent = '';
     visiblePayments.forEach((payment) => {
-      const card = createElement('article', { className: 'player-card' });
+      const card = createElement('article', { className: 'player-card compact-card' });
       const details = createElement('dl', { className: 'player-meta' });
       [
         ['Payment method', paymentMethodLabel(payment.method)],
@@ -708,7 +708,7 @@ function createEntrySheetsCard(bootstrapRequest) {
   let entrySheetsRefreshQueued = false;
   let entrySheetFilter = 'current';
   let latestEntrySheetsData = null;
-  const card = createElement('section', { className: 'state-card' });
+  const card = createElement('section', { className: 'state-card compact-card' });
   const status = createElement('p', {
     className: 'muted',
     text: 'Loading entry sheets...',
@@ -747,7 +747,8 @@ function createEntrySheetsCard(bootstrapRequest) {
 
   function renderCurrentEntries(data, entries) {
     if (data.week && entries.length) entries.forEach((entry) => {
-      const entryCard = createElement('article', { className: 'player-card' });
+      const entryCard = createElement('article', { className: 'player-card compact-card' });
+      const header = createElement('div', { className: 'player-card-header' });
       const details = createElement('dl', { className: 'player-meta' });
       [
         ['Week', `Season ${data.week.season} - ${seasonTypeLabel(data.week.seasonType)} Week ${data.week.nflWeek}`],
@@ -766,7 +767,7 @@ function createEntrySheetsCard(bootstrapRequest) {
       });
       const buttons = createElement('div', { className: 'button-row' });
       buttons.appendChild(open);
-      appendChildren(entryCard, [
+      appendChildren(header, [
         createElement('h3', { text: entry.entryLabel || 'Entry' }),
         createElement('span', {
           className: `status-pill ${entry.status === 'active' ? '' : 'status-pill-muted'}`,
@@ -776,6 +777,9 @@ function createEntrySheetsCard(bootstrapRequest) {
           className: `status-pill ${entry.complete ? '' : 'status-pill-muted'}`,
           text: entry.complete ? 'Complete' : 'In progress',
         }),
+      ]);
+      appendChildren(entryCard, [
+        header,
         details,
         buttons,
       ]);
@@ -787,7 +791,8 @@ function createEntrySheetsCard(bootstrapRequest) {
     if (completedEntries.length) {
       list.appendChild(createElement('h3', { text: 'Completed Results' }));
       completedEntries.forEach((entry) => {
-        const entryCard = createElement('article', { className: 'player-card' });
+        const entryCard = createElement('article', { className: 'player-card compact-card' });
+        const header = createElement('div', { className: 'player-card-header' });
         const details = createElement('dl', { className: 'player-meta' });
         [
           ['Week', `Season ${entry.week.season} - ${seasonTypeLabel(entry.week.seasonType)} Week ${entry.week.nflWeek}`],
@@ -808,9 +813,12 @@ function createEntrySheetsCard(bootstrapRequest) {
         });
         const buttons = createElement('div', { className: 'button-row' });
         buttons.appendChild(open);
-        appendChildren(entryCard, [
+        appendChildren(header, [
           createElement('h3', { text: entry.entryLabel || 'Entry' }),
           createElement('span', { className: 'status-pill', text: `${entry.result.regularPoints} of ${entry.result.totalGames}` }),
+        ]);
+        appendChildren(entryCard, [
+          header,
           details,
           buttons,
         ]);
@@ -911,7 +919,7 @@ function createEntrySheetsCard(bootstrapRequest) {
 export function createPlayerDashboardView(context = {}) {
   const player = context.player || {};
   const wrapper = createElement('main', { className: 'page-container' });
-  const card = createElement('section', { className: 'state-card player-dashboard-card' });
+  const card = createElement('section', { className: 'state-card compact-card player-dashboard-card' });
   const avatar = createElement('span', { className: 'player-avatar large-avatar', text: player.avatar || 'football' });
   const status = createElement('span', { className: 'status-pill', text: player.status || 'active' });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
