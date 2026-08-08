@@ -226,7 +226,14 @@ function createInviteFriendsCard(player, bootstrapRequest) {
   function renderRewardSummary() {
     const section = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Referral reward progress' } });
     const summaryCard = createElement('article', { className: 'player-card compact-card' });
-    const details = createElement('dl', { className: 'player-meta' });
+    const milestones = createElement('ul', { className: 'muted referral-reward-list' });
+    const details = createElement('dl', { className: 'player-meta referral-reward-meta' });
+    [
+      '10 referrals — 1 free entry',
+      '20 referrals — 2 more free entries',
+      '25 referrals — football badge',
+      '50 referrals — 3 more free entries and crown badge',
+    ].forEach((item) => milestones.appendChild(createElement('li', { text: item })));
     [
       ['Qualified referrals', String(rewardSummary.qualifiedReferralCount || 0)],
       ['Free entries earned', String(rewardSummary.earnedFreeEntries || 0)],
@@ -239,10 +246,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
     });
     appendChildren(summaryCard, [
       createElement('h3', { text: 'EARN UP TO 6 FREE ENTRIES' }),
-      createElement('p', { className: 'muted', text: '10 qualified referrals — 1 free entry' }),
-      createElement('p', { className: 'muted', text: '20 qualified referrals — 2 more free entries' }),
-      createElement('p', { className: 'muted', text: '25 qualified referrals — football badge' }),
-      createElement('p', { className: 'muted', text: '50 qualified referrals — 3 more free entries and crown badge' }),
+      milestones,
       details,
     ]);
     section.appendChild(summaryCard);

@@ -395,6 +395,29 @@ h1 {
   gap: var(--space-4);
 }
 
+.referral-reward-list {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  padding-left: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.referral-reward-meta {
+  grid-template-columns: 1fr;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.referral-reward-meta dt {
+  margin-top: var(--space-1);
+}
+
+.referral-reward-meta dd {
+  overflow-wrap: anywhere;
+}
+
 .large-avatar {
   font-size: 1.15rem;
   min-height: 48px;
