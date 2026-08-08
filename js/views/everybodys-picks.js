@@ -1,7 +1,7 @@
-import { getManagerSessionToken } from '../auth.js?v=20260807-1';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260807-1';
-import { requestAction } from '../api.js?v=20260807-1';
-import { navigateTo } from '../router.js?v=20260807-1';
+import { getManagerSessionToken } from '../auth.js?v=20260807-2';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260807-2';
+import { requestAction } from '../api.js?v=20260807-2';
+import { navigateTo } from '../router.js?v=20260807-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

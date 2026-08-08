@@ -4,12 +4,13 @@ export function captureInviteParamsFromHash() {
   const hash = window.location.hash || '';
   const queryIndex = hash.indexOf('?');
   if (queryIndex === -1) {
-    return { inviteToken: '', referralCode: '' };
+    return { inviteToken: '', referralCode: '', inviteCode: '' };
   }
   const params = new URLSearchParams(hash.slice(queryIndex + 1));
   return {
     inviteToken: params.get('invite') || '',
     referralCode: params.get('ref') || '',
+    inviteCode: params.get('i') || '',
   };
 }
 
@@ -22,14 +23,16 @@ export function clearInviteParamsFromHash() {
 }
 
 export function buildInviteLink(inviteToken, referralCode = '') {
+  if (referralCode) {
+    const base = `${window.location.origin}${window.location.pathname}`;
+    const params = new URLSearchParams({ i: referralCode });
+    return `${base}#/player-register?${params.toString()}`;
+  }
   if (!inviteToken) {
     return '';
   }
   const base = `${window.location.origin}${window.location.pathname}`;
   const params = new URLSearchParams({ invite: inviteToken });
-  if (referralCode) {
-    params.set('ref', referralCode);
-  }
   return `${base}#/player-register?${params.toString()}`;
 }
 
