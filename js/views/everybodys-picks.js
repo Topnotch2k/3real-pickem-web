@@ -1,7 +1,7 @@
-import { getManagerSessionToken } from '../auth.js?v=20260808-1';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260808-1';
-import { requestAction } from '../api.js?v=20260808-1';
-import { navigateTo } from '../router.js?v=20260808-1';
+import { getManagerSessionToken } from '../auth.js?v=20260808-2';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260808-2';
+import { requestAction } from '../api.js?v=20260808-2';
+import { navigateTo } from '../router.js?v=20260808-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -29,12 +29,14 @@ function actorConfig(actor) {
         token: getManagerSessionToken,
         backRoute: 'manager-dashboard',
         backText: 'Back to Manager Dashboard',
+        resultsRoute: '',
       }
     : {
         action: 'player.week.picksBoard',
         token: getPlayerSessionToken,
         backRoute: 'player-dashboard',
         backText: 'Back to Player Dashboard',
+        resultsRoute: 'player-weekly-results',
       };
 }
 
@@ -333,6 +335,30 @@ function renderCurrentPot(data) {
   return panel;
 }
 
+function renderWeeklyResultsBanner(data, config) {
+  const weekId = data && data.selectedWeekId;
+  if (
+    !config.resultsRoute ||
+    !weekId ||
+    data.grading?.graded !== true ||
+    data.weeklyResults?.available !== true
+  ) {
+    return null;
+  }
+  const button = createElement('button', {
+    className: 'weekly-results-banner',
+    attributes: { type: 'button' },
+  });
+  appendChildren(button, [
+    createElement('span', { className: 'weekly-results-banner-title', text: 'WEEKLY RESULTS ARE IN \u{1F3C6}' }),
+    createElement('span', { className: 'weekly-results-banner-copy', text: 'See Champion & Podium' }),
+  ]);
+  button.addEventListener('click', () => {
+    navigateTo(`${config.resultsRoute}?weekId=${encodeURIComponent(weekId)}`);
+  });
+  return button;
+}
+
 export function createEverybodysPicksView({ actor = 'player' } = {}) {
   const config = actorConfig(actor);
   let boardData = null;
@@ -371,6 +397,8 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
   function render() {
     renderWeekOptions();
     actions.replaceChildren();
+    const resultsBanner = renderWeeklyResultsBanner(boardData || {}, config);
+    if (resultsBanner) actions.appendChild(resultsBanner);
     const currentPot = renderCurrentPot(boardData || {});
     if (currentPot) actions.appendChild(currentPot);
     actions.appendChild(back);

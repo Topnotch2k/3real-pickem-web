@@ -1,6 +1,6 @@
-import { getPlayerSessionToken } from '../player-auth.js?v=20260808-1';
-import { requestAction } from '../api.js?v=20260808-1';
-import { navigateTo } from '../router.js?v=20260808-1';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260808-2';
+import { requestAction } from '../api.js?v=20260808-2';
+import { navigateTo } from '../router.js?v=20260808-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -120,6 +120,42 @@ function renderResults(data) {
   return fragment;
 }
 
+function confettiKey(weekId) {
+  return `3real_weekly_results_confetti_${weekId || 'default'}`;
+}
+
+function reducedMotionEnabled() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function fireWeeklyResultsConfetti(weekId) {
+  if (reducedMotionEnabled()) return;
+  const key = confettiKey(weekId);
+  try {
+    if (window.sessionStorage.getItem(key) === 'shown') return;
+    window.sessionStorage.setItem(key, 'shown');
+  } catch {
+    return;
+  }
+  const overlay = createElement('div', { className: 'weekly-results-confetti', attributes: { 'aria-hidden': 'true' } });
+  const colors = ['weekly-results-confetti-gold', 'weekly-results-confetti-soft', 'weekly-results-confetti-white'];
+  Array.from({ length: 42 }, (_, index) => {
+    const piece = createElement('span', {
+      className: `weekly-results-confetti-piece ${colors[index % colors.length]}`,
+    });
+    piece.style.setProperty('--x', `${(index * 37) % 100}%`);
+    piece.style.setProperty('--delay', `${(index % 9) * 0.08}s`);
+    piece.style.setProperty('--drift', `${((index % 7) - 3) * 1.35}rem`);
+    piece.style.setProperty('--spin', `${index % 2 === 0 ? '' : '-'}${220 + (index % 5) * 50}deg`);
+    overlay.appendChild(piece);
+    return piece;
+  });
+  document.body.appendChild(overlay);
+  window.setTimeout(() => {
+    overlay.remove();
+  }, 2600);
+}
+
 export function createWeeklyResultsView() {
   const wrapper = createElement('main', { className: 'page-container' });
   const card = createElement('section', { className: 'state-card weekly-results-shell' });
@@ -155,6 +191,9 @@ export function createWeeklyResultsView() {
       subtitle.textContent = weekLabel(data.week);
       status.textContent = '';
       results.appendChild(renderResults(data));
+      if (data.weeklyResults && data.weeklyResults.available === true) {
+        fireWeeklyResultsConfetti(data.selectedWeekId || data.week && data.week.weekId || weekId);
+      }
     } catch (error) {
       status.textContent = error.message || 'Unable to load Weekly Results.';
       status.classList.add('error-text');

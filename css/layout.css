@@ -219,6 +219,41 @@ h1 {
   text-transform: uppercase;
 }
 
+.weekly-results-banner {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-lg);
+  background: rgba(7, 9, 7, 0.92);
+  color: var(--color-white);
+  cursor: pointer;
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.weekly-results-banner:hover,
+.weekly-results-banner:focus-visible {
+  border-color: var(--color-gold-soft);
+  box-shadow: 0 0 0 3px rgba(217, 173, 50, 0.16);
+}
+
+.weekly-results-banner-title {
+  color: var(--color-gold-soft);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+}
+
+.weekly-results-banner-copy {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .weekly-results-shell {
   display: grid;
   gap: var(--space-3);
@@ -314,6 +349,61 @@ h1 {
 .weekly-results-podium {
   display: grid;
   gap: var(--space-3);
+}
+
+.weekly-results-confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.weekly-results-confetti-piece {
+  position: absolute;
+  top: -1rem;
+  left: var(--x);
+  width: 0.42rem;
+  height: 0.78rem;
+  border-radius: 999px;
+  opacity: 0;
+  animation: weekly-results-confetti-fall 2.25s ease-out forwards;
+  animation-delay: var(--delay);
+  transform: translate3d(0, 0, 0) rotate(0deg);
+}
+
+.weekly-results-confetti-gold {
+  background: var(--color-gold);
+}
+
+.weekly-results-confetti-soft {
+  background: var(--color-gold-soft);
+}
+
+.weekly-results-confetti-white {
+  background: var(--color-white);
+}
+
+@keyframes weekly-results-confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -1rem, 0) rotate(0deg);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekly-results-confetti-piece {
+    animation: none;
+  }
 }
 
 .week-controls .button-row {
