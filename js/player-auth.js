@@ -1,4 +1,4 @@
-import { requestAction } from './api.js?v=20260808-3';
+import { requestAction } from './api.js?v=20260808-4';
 
 const PLAYER_SESSION_KEY = '3real_pickem_player_session_token';
 

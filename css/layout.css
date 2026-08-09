@@ -537,6 +537,23 @@ h1 {
   color: var(--color-muted);
 }
 
+.registered-players-card,
+.registered-players-list,
+.registered-player-card,
+.registered-player-title {
+  min-width: 0;
+}
+
+.registered-player-title h3,
+.registered-player-card .player-meta dd {
+  overflow-wrap: anywhere;
+}
+
+.registered-player-card .player-card-header {
+  min-width: 0;
+  align-items: flex-start;
+}
+
 .status-pill-muted {
   border-color: rgba(197, 193, 173, 0.55);
   color: var(--color-muted);

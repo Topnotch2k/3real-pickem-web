@@ -1,7 +1,7 @@
-import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260808-3';
-import { requestAction } from '../api.js?v=20260808-3';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260808-3';
-import { navigateTo } from '../router.js?v=20260808-3';
+import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260808-4';
+import { requestAction } from '../api.js?v=20260808-4';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260808-4';
+import { navigateTo } from '../router.js?v=20260808-4';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -37,6 +37,14 @@ function formatDateTime(value) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function formatDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unavailable';
+  }
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date);
 }
 
 function referralStatusLabel(status) {
@@ -164,6 +172,86 @@ function createInviteCard() {
 
   render();
   loadInvite();
+  return card;
+}
+
+function createRegisteredPlayersCard() {
+  let players = [];
+  const card = createElement('section', { className: 'state-card registered-players-card' });
+  const status = createElement('p', {
+    className: 'muted',
+    text: 'Loading registered players...',
+    attributes: { role: 'status', 'aria-live': 'polite' },
+  });
+  const total = createElement('p', { className: 'status-pill', text: 'Total: 0' });
+  const list = createElement('section', {
+    className: 'player-list registered-players-list',
+    attributes: { 'aria-label': 'Registered Players' },
+  });
+
+  function render() {
+    total.textContent = `Total: ${players.length}`;
+    list.replaceChildren();
+    if (!players.length) {
+      list.appendChild(createElement('p', { className: 'muted', text: 'No registered players yet.' }));
+      return;
+    }
+    players.forEach((player) => {
+      const playerCard = createElement('article', { className: 'player-card registered-player-card' });
+      const header = createElement('div', { className: 'player-card-header' });
+      const title = createElement('div', { className: 'registered-player-title' });
+      const playerStatus = String(player.status || 'active').toLowerCase();
+      const pill = createElement('span', {
+        className: `status-pill ${playerStatus === 'inactive' ? 'status-pill-muted' : ''}`,
+        text: playerStatus === 'inactive' ? 'Inactive' : 'Active',
+      });
+      appendChildren(title, [createElement('h3', { text: player.displayName || 'Unnamed player' }), pill]);
+      appendChildren(header, [
+        createElement('span', { className: 'player-avatar', text: player.avatar || 'football' }),
+        title,
+      ]);
+      const currentWeek = player.currentWeek || null;
+      const entryCount = currentWeek ? Number(currentWeek.entryCount || 0) : 0;
+      const meta = createElement('dl', { className: 'player-meta' });
+      [
+        ['Joined', formatDate(player.profileCreatedAt || player.createdAt)],
+        ['Referred By', player.referredBy && player.referredBy.displayName ? player.referredBy.displayName : 'Not referred'],
+        ['Active Entry', currentWeek && currentWeek.hasActiveEntry ? 'Yes' : 'No'],
+        ['Entries This Week', String(entryCount)],
+      ].forEach(([label, value]) => {
+        meta.appendChild(createElement('dt', { text: label }));
+        meta.appendChild(createElement('dd', { text: value }));
+      });
+      appendChildren(playerCard, [header, meta]);
+      list.appendChild(playerCard);
+    });
+  }
+
+  async function loadPlayers() {
+    try {
+      const result = await managerAction('manager.players.list', { status: 'all', search: '' });
+      if (!card.isConnected) {
+        return;
+      }
+      players = result.data.players || [];
+      status.textContent = '';
+      status.classList.remove('error-text');
+      render();
+    } catch (error) {
+      status.textContent = error.message || 'Registered players could not be loaded.';
+      status.classList.add('error-text');
+    }
+  }
+
+  appendChildren(card, [
+    createElement('p', { className: 'eyebrow', text: 'Registered Players' }),
+    createElement('h2', { text: 'Registered Players' }),
+    total,
+    status,
+    list,
+  ]);
+  render();
+  loadPlayers();
   return card;
 }
 
@@ -377,6 +465,7 @@ export function createManagerDashboardView(context = {}) {
     buttonRow,
   ]);
   wrapper.appendChild(card);
+  wrapper.appendChild(createRegisteredPlayersCard());
   wrapper.appendChild(createInviteCard());
   wrapper.appendChild(createReferralsCard());
   window.setTimeout(pollPendingPayments, 0);
