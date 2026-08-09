@@ -372,7 +372,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
     if (!paymentOptions || !paymentOptions.week) {
       return null;
     }
-    return payments.find((payment) => ['pending', 'approved', 'paid'].indexOf(payment.status) !== -1 && payment.weekId === paymentOptions.week.weekId) || null;
+    return payments.find((payment) => ['pending', 'approved'].indexOf(payment.status) !== -1 && payment.weekId === paymentOptions.week.weekId) || null;
   }
 
   function updateTotal() {
