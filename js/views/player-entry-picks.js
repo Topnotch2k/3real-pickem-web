@@ -54,13 +54,17 @@ export function createPlayerEntryPicksView() {
     attributes: { role: 'status', 'aria-live': 'polite' },
   });
   const back = createElement('button', { className: 'secondary-button', text: 'Player Dashboard', attributes: { type: 'button' } });
-  const save = createElement('button', { className: 'primary-button', text: 'Save Picks', attributes: { type: 'button', disabled: 'disabled' } });
+  const topSave = createElement('button', { className: 'primary-button', text: 'Save Picks', attributes: { type: 'button', disabled: 'disabled' } });
+  const bottomSave = createElement('button', { className: 'primary-button full-width-button', text: 'Save Picks', attributes: { type: 'button', disabled: 'disabled' } });
+  const saveButtons = [topSave, bottomSave];
+  const bottomButtons = createElement('div', { className: 'button-row' });
   const weekBadge = createElement('span', {
     className: 'status-pill',
     text: 'WEEK',
   });
   const buttons = createElement('div', { className: 'button-row' });
-  appendChildren(buttons, [save, back, weekBadge]);
+  appendChildren(buttons, [topSave, back, weekBadge]);
+  bottomButtons.appendChild(bottomSave);
   appendChildren(header, [
     createElement('p', { className: 'eyebrow', text: 'Player Picks' }),
     createElement('h1', { text: 'Weekly Pick Sheet' }),
@@ -99,14 +103,18 @@ export function createPlayerEntryPicksView() {
     const tiebreakerDirty = dirtyPredictedTotal();
     const hasAuthoritativePicks = Boolean(state && state.picks && state.picks.length);
     const hasEditableGames = Boolean(state && (state.games || []).some((game) => game.editable));
-    save.disabled = !state || saving || saveBlocked || !entryAvailable || (dirty.length === 0 && !tiebreakerDirty);
-    save.textContent = saving
+    const saveDisabled = !state || saving || saveBlocked || !entryAvailable || (dirty.length === 0 && !tiebreakerDirty);
+    const saveText = saving
       ? 'Saving Picks...'
       : saveBlocked || !entryAvailable
         ? 'Save Unavailable'
         : state && hasEditableGames && hasAuthoritativePicks && dirty.length === 0
           ? 'Picks Saved'
           : 'Save Picks';
+    saveButtons.forEach((saveButton) => {
+      saveButton.disabled = saveDisabled;
+      saveButton.textContent = saveText;
+    });
     content.querySelectorAll('input[type="radio"]').forEach((control) => {
       const game = (state.games || []).find((item) => item.gameId === control.dataset.gameId);
       control.disabled = saving || saveBlocked || !entryAvailable || !game || !game.editable;
@@ -281,6 +289,7 @@ export function createPlayerEntryPicksView() {
       .filter((game) => game.gameId !== tiebreakerGameId)
       .forEach((game) => content.appendChild(createGameCard(game, selected)));
     if (tiebreakerGame) content.appendChild(createTiebreakerCard(tiebreakerGame, selected));
+    content.appendChild(bottomButtons);
     updateAvailability();
   }
 
@@ -296,7 +305,7 @@ export function createPlayerEntryPicksView() {
     }
   }
 
-  save.addEventListener('click', async () => {
+  async function savePicks() {
     if (saving || saveBlocked || !state || !entryAvailable) return;
     const selections = dirtySelections();
     const tiebreakerDirty = dirtyPredictedTotal();
@@ -346,7 +355,10 @@ export function createPlayerEntryPicksView() {
       saving = false;
       updateAvailability();
     }
-  });
+  }
+
+  topSave.addEventListener('click', savePicks);
+  bottomSave.addEventListener('click', savePicks);
 
   if (entryId) {
     loadEntryPicks().catch((error) => {
