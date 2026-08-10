@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260809-1';
-import { requestAction } from '../api.js?v=20260809-1';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260809-1';
-import { navigateTo } from '../router.js?v=20260809-1';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260809-2';
+import { requestAction } from '../api.js?v=20260809-2';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260809-2';
+import { navigateTo } from '../router.js?v=20260809-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -328,6 +328,8 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   let activeFreeEntryRequest = null;
   let paymentsRequest = null;
   let paymentRefreshTimeout = null;
+  let paymentInstructions = null;
+  let paymentInstructionsUnavailable = false;
 
   const requestCard = createElement('section', { className: 'state-card compact-card' });
   const form = createElement('form', { className: 'auth-form dashboard-payment-form' });
@@ -351,6 +353,10 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   const buttons = createElement('div', { className: 'button-row' });
   buttons.appendChild(submit);
   buttons.appendChild(redeemFreeEntry);
+  const instructionRegion = createElement('section', {
+    className: 'payment-instructions',
+    attributes: { hidden: 'hidden', 'aria-live': 'polite' },
+  });
 
   const historyCard = createElement('section', { className: 'state-card compact-card' });
   const historyStatus = createElement('p', {
@@ -373,6 +379,74 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       return null;
     }
     return payments.find((payment) => ['pending', 'approved'].indexOf(payment.status) !== -1 && payment.weekId === paymentOptions.week.weekId) || null;
+  }
+
+  function renderPaymentInstructions(created = false) {
+    instructionRegion.replaceChildren();
+    if (paymentInstructionsUnavailable) {
+      instructionRegion.hidden = false;
+      appendChildren(instructionRegion, [
+        createElement('p', { className: 'eyebrow', text: 'Payment Pending' }),
+        createElement('p', {
+          className: 'payment-instructions-unavailable',
+          text: 'Payment destination is temporarily unavailable.',
+        }),
+        createElement('p', { className: 'muted', text: 'Contact the League Manager.' }),
+      ]);
+      return;
+    }
+    if (!paymentInstructions || !paymentInstructions.destinationValue) {
+      instructionRegion.hidden = true;
+      return;
+    }
+    const destinationValue = String(paymentInstructions.destinationValue);
+    const copyStatus = createElement('span', {
+      className: 'muted payment-instructions-copy-status',
+      attributes: { role: 'status', 'aria-live': 'polite' },
+    });
+    const copy = createElement('button', {
+      className: 'secondary-button payment-instructions-copy',
+      text: 'Copy',
+      attributes: { type: 'button' },
+    });
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(destinationValue);
+        copyStatus.textContent = 'Copied';
+      } catch (error) {
+        copyStatus.textContent = 'Copy failed. Select and copy the destination.';
+      }
+    });
+    instructionRegion.hidden = false;
+    appendChildren(instructionRegion, [
+      createElement('p', {
+        className: 'eyebrow',
+        text: created ? 'Payment Request Created' : 'Payment Pending',
+      }),
+      createElement('p', {
+        className: 'payment-instructions-amount',
+        text: `Send ${formatMoney(paymentInstructions.amountDueCents)} to`,
+      }),
+      createElement('p', {
+        className: 'payment-instructions-label',
+        text: paymentInstructions.destinationLabel || paymentMethodLabel(paymentInstructions.method),
+      }),
+      createElement('p', {
+        className: 'payment-instructions-destination',
+        text: destinationValue,
+      }),
+      createElement('div', { className: 'button-row payment-instructions-actions' }),
+      createElement('p', { className: 'status-pill status-pill-muted', text: 'Payment pending verification.' }),
+      createElement('p', { className: 'muted', text: 'Send your payment outside the app. The manager will mark it Paid after verifying it.' }),
+    ]);
+    const actions = instructionRegion.querySelector('.payment-instructions-actions');
+    appendChildren(actions, [copy, copyStatus]);
+  }
+
+  function applyPaymentInstructionResponse(data, created = false) {
+    paymentInstructions = data && data.paymentInstructions || null;
+    paymentInstructionsUnavailable = Boolean(data && data.paymentInstructionsUnavailable);
+    renderPaymentInstructions(created);
   }
 
   function updateTotal() {
@@ -488,7 +562,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
     }
   }
 
-  async function loadPayments(initialBootstrapRequest, background = false) {
+  async function loadPayments(initialBootstrapRequest, background = false, preserveCreated = false) {
     if (paymentsRequest) {
       if (background || initialBootstrapRequest) {
         return paymentsRequest;
@@ -509,6 +583,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
         const paidPaymentReceived = payments.some((payment) => payment.status !== 'paid' &&
           nextPayments.some((nextPayment) => nextPayment.paymentId === payment.paymentId && nextPayment.status === 'paid'));
         payments = nextPayments;
+        applyPaymentInstructionResponse(data, preserveCreated);
         paymentsLoaded = true;
         historyStatus.classList.remove('error-text');
         renderHistory();
@@ -684,15 +759,18 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
         payments = [submittedPayment].concat(payments.filter((payment) => payment.paymentId !== submittedPayment.paymentId));
         renderHistory();
       }
+      applyPaymentInstructionResponse(result.data, true);
       clearLogicalRequest();
       message.textContent = 'Payment request submitted. The manager must approve it and mark it paid before your entries are created.';
-      await loadPayments();
+      await loadPayments(null, false, true);
     } catch (error) {
       message.textContent = error.message;
       message.classList.add('error-text');
       if (error.code === 'PAYMENT_PENDING_EXISTS') {
         clearLogicalRequest();
         await loadPayments();
+      } else {
+        applyPaymentInstructionResponse(null);
       }
     } finally {
       submitting = false;
@@ -718,6 +796,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       text: 'Choose how you will pay the manager. Cash, Cash App, and Apple Pay are verified outside the app. Your entries are created only after the manager marks the approved payment paid.',
     }),
     form,
+    instructionRegion,
   ]);
   appendChildren(historyCard, [
     createElement('p', { className: 'eyebrow', text: 'Payments' }),

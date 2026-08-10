@@ -1,6 +1,6 @@
-import { getPlayerSessionToken } from '../player-auth.js?v=20260809-1';
-import { requestAction } from '../api.js?v=20260809-1';
-import { navigateTo } from '../router.js?v=20260809-1';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260809-2';
+import { requestAction } from '../api.js?v=20260809-2';
+import { navigateTo } from '../router.js?v=20260809-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

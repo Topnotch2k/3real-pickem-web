@@ -1,4 +1,4 @@
-import { APP_CONFIG } from './config.js?v=20260809-1';
+import { APP_CONFIG } from './config.js?v=20260809-2';
 
 const READ_ONLY_ACTIONS = new Set([
   'public.health',
