@@ -1,7 +1,7 @@
-import { getManagerSessionToken } from '../auth.js?v=20260809-2';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260809-2';
-import { requestAction } from '../api.js?v=20260809-2';
-import { navigateTo } from '../router.js?v=20260809-2';
+import { getManagerSessionToken } from '../auth.js?v=20260810-1';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260810-1';
+import { requestAction } from '../api.js?v=20260810-1';
+import { navigateTo } from '../router.js?v=20260810-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -203,7 +203,7 @@ function renderLeagueLeaders(data) {
     renderLeaderCategory('\uD83D\uDC51 Most Wins', leaders.mostWins, (leader) => `${displayValue(leader.weeklyWins)} ${plural(leader.weeklyWins, 'win', 'wins')}`),
     renderLeaderCategory('\uD83C\uDFAF Best Accuracy', leaders.bestAccuracy, (leader) => formatPercent(leader.accuracy)),
     renderLeaderCategory('\uD83D\uDD25 Best Streak', leaders.bestStreak, (leader) => `${displayValue(leader.longestStreak)} ${plural(leader.longestStreak, 'week', 'weeks')}`),
-    renderLeaderCategory('\uD83E\uDD1D Top Recruiter', leaders.topRecruiter, (leader) => `${displayValue(leader.qualifiedReferralCount)} ${plural(leader.qualifiedReferralCount, 'recruit', 'recruits')}`),
+    renderLeaderCategory('\uD83E\uDD1D Top Recruiter', leaders.topRecruiter, (leader) => `${displayValue(leader.registeredRecruitCount)} ${plural(leader.registeredRecruitCount, 'recruit', 'recruits')}`),
   ]);
   return section;
 }

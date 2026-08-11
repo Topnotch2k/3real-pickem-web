@@ -1,5 +1,5 @@
-import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260809-2';
-import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260809-2';
+import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260810-1';
+import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260810-1';
 
 const routes = new Map();
 

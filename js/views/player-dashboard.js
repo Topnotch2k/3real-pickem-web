@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260809-2';
-import { requestAction } from '../api.js?v=20260809-2';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260809-2';
-import { navigateTo } from '../router.js?v=20260809-2';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260810-1';
+import { requestAction } from '../api.js?v=20260810-1';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260810-1';
+import { navigateTo } from '../router.js?v=20260810-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -133,6 +133,7 @@ function paymentMethodLabel(method) {
     cash: 'Cash',
     cash_app: 'Cash App',
     apple_pay: 'Apple Pay',
+    zelle: 'Zelle',
   }[method] || String(method || 'Unknown');
 }
 
@@ -793,7 +794,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
     createElement('h2', { text: 'Payment Request' }),
     createElement('p', {
       className: 'muted',
-      text: 'Choose how you will pay the manager. Cash, Cash App, and Apple Pay are verified outside the app. Your entries are created only after the manager marks the approved payment paid.',
+      text: 'Choose how you will pay the manager. Cash, Cash App, Apple Pay, and Zelle are verified outside the app. Your entries are created only after the manager marks the approved payment paid.',
     }),
     form,
     instructionRegion,
