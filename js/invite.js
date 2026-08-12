@@ -64,3 +64,4 @@ export async function shareInviteLink(inviteLink) {
   await navigator.share({ text: INVITE_SHARE_TEXT, url: inviteLink });
   return 'shared';
 }
+

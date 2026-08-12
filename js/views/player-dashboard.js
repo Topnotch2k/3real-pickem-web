@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260812-1';
-import { requestAction } from '../api.js?v=20260812-1';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-1';
-import { navigateTo } from '../router.js?v=20260812-1';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260812-2';
+import { requestAction } from '../api.js?v=20260812-2';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-2';
+import { navigateTo } from '../router.js?v=20260812-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -1208,22 +1208,16 @@ function createDashboardMoraleCard(bootstrapRequest) {
   const body = createElement('div');
   card.hidden = true;
 
-  function playerCountLabel(count) {
-    return `${count} Registered ${count === 1 ? 'Player' : 'Players'}`;
-  }
-
   function render(data) {
-    const registeredPlayerCount = Number(data.leagueSummary && data.leagueSummary.registeredPlayerCount);
     const thisWeek = data.entrySheets && data.entrySheets.thisWeek;
-    const showCount = Number.isSafeInteger(registeredPlayerCount) && registeredPlayerCount >= 0;
     const showPreseason = thisWeek && thisWeek.seasonType === 'preseason';
     body.replaceChildren();
-    if (!showCount && !showPreseason) {
+    if (!showPreseason) {
       card.hidden = true;
       return;
     }
     card.hidden = false;
-    if (showCount) {
+    if (false) {
       body.appendChild(createElement('p', { className: 'status-pill status-pill-muted', text: `👥 ${playerCountLabel(registeredPlayerCount)}` }));
     }
     if (showPreseason) {
@@ -1236,14 +1230,35 @@ function createDashboardMoraleCard(bootstrapRequest) {
   bootstrapRequest
     .then((result) => {
       const sections = result.data || {};
-      const leagueSummary = sections.leagueSummary && sections.leagueSummary.ok === true ? sections.leagueSummary.data : null;
       const entrySheets = sections.entrySheets && sections.entrySheets.ok === true ? sections.entrySheets.data : null;
-      render({ leagueSummary, entrySheets });
+      render({ entrySheets });
     })
     .catch(() => {
       card.hidden = true;
     });
   return card;
+}
+
+function registeredPlayerCountLabel(count) {
+  return `${count} Registered ${count === 1 ? 'Player' : 'Players'}`;
+}
+
+function loadRegisteredPlayerCount(bootstrapRequest, countPill) {
+  bootstrapRequest
+    .then((result) => {
+      const sections = result.data || {};
+      const leagueSummary = sections.leagueSummary && sections.leagueSummary.ok === true ? sections.leagueSummary.data : null;
+      const registeredPlayerCount = Number(leagueSummary && leagueSummary.registeredPlayerCount);
+      if (!Number.isSafeInteger(registeredPlayerCount) || registeredPlayerCount < 0) {
+        countPill.hidden = true;
+        return;
+      }
+      countPill.hidden = false;
+      countPill.textContent = `ðŸ‘¥ ${registeredPlayerCountLabel(registeredPlayerCount)}`;
+    })
+    .catch(() => {
+      countPill.hidden = true;
+    });
 }
 
 export function createPlayerDashboardView(context = {}) {
@@ -1257,6 +1272,7 @@ export function createPlayerDashboardView(context = {}) {
   const avatar = createElement('span', { className: 'player-avatar large-avatar', text: player.avatar || 'football' });
   const status = createElement('span', { className: 'status-pill', text: player.status || 'active' });
   const accent = createElement('span', { className: 'player-dashboard-accent', text: '🏈' });
+  const registeredPlayers = createElement('span', { className: 'status-pill status-pill-muted', attributes: { hidden: 'hidden' } });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
   const dashboardGrid = createElement('section', { className: 'player-dashboard-grid' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
@@ -1280,7 +1296,8 @@ export function createPlayerDashboardView(context = {}) {
     createElement('h2', { text: `Welcome back, ${player.displayName || 'Player'}` }),
     status,
   ]);
-  appendChildren(actions, [accent, logout]);
+  appendChildren(actions, [accent, registeredPlayers, logout]);
+  loadRegisteredPlayerCount(bootstrapRequest, registeredPlayers);
   appendChildren(summary, [summaryIntro, identity, actions]);
   appendChildren(dashboardGrid, [
     paymentWorkspace.requestCard,
@@ -1299,3 +1316,4 @@ export function createPlayerDashboardView(context = {}) {
   ]);
   return wrapper;
 }
+

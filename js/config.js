@@ -6,3 +6,4 @@ export const APP_CONFIG = Object.freeze({
   // admin permissions in this file. GitHub Pages serves this code publicly.
   appsScriptWebAppUrl: 'https://real-pickem-api-staging-393681715061.us-central1.run.app',
 });
+

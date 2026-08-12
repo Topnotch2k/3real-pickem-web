@@ -1,5 +1,5 @@
-import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260812-1';
-import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260812-1';
+import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260812-2';
+import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260812-2';
 
 const routes = new Map();
 
@@ -95,3 +95,4 @@ export function startRouter(root) {
   window.addEventListener('hashchange', render);
   render();
 }
+

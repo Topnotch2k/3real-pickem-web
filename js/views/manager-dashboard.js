@@ -1,7 +1,7 @@
-import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260812-1';
-import { requestAction } from '../api.js?v=20260812-1';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-1';
-import { navigateTo } from '../router.js?v=20260812-1';
+import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260812-2';
+import { requestAction } from '../api.js?v=20260812-2';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-2';
+import { navigateTo } from '../router.js?v=20260812-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -471,3 +471,4 @@ export function createManagerDashboardView(context = {}) {
   window.setTimeout(pollPendingPayments, 0);
   return wrapper;
 }
+

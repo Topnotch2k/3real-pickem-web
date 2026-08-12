@@ -1,4 +1,4 @@
-import { APP_CONFIG } from './config.js?v=20260812-1';
+import { APP_CONFIG } from './config.js?v=20260812-2';
 
 const READ_ONLY_ACTIONS = new Set([
   'public.health',
@@ -118,3 +118,4 @@ export async function requestAction(action, payload = {}) {
 
   throw new ApiError('The league backend returned an unreadable response.', { code: 'PARSE_ERROR' });
 }
+

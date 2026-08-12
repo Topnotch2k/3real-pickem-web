@@ -1,5 +1,5 @@
-import { loginManager } from '../auth.js?v=20260812-1';
-import { navigateTo } from '../router.js?v=20260812-1';
+import { loginManager } from '../auth.js?v=20260812-2';
+import { navigateTo } from '../router.js?v=20260812-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -114,3 +114,4 @@ export function createManagerLoginView() {
   wrapper.appendChild(card);
   return wrapper;
 }
+
