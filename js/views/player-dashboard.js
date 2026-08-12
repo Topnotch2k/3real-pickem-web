@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260812-2';
-import { requestAction } from '../api.js?v=20260812-2';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-2';
-import { navigateTo } from '../router.js?v=20260812-2';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260812-3';
+import { requestAction } from '../api.js?v=20260812-3';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-3';
+import { navigateTo } from '../router.js?v=20260812-3';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
