@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260810-1';
-import { requestAction } from '../api.js?v=20260810-1';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260810-1';
-import { navigateTo } from '../router.js?v=20260810-1';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260812-1';
+import { requestAction } from '../api.js?v=20260812-1';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-1';
+import { navigateTo } from '../router.js?v=20260812-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -317,6 +317,8 @@ function createInviteFriendsCard(player, bootstrapRequest) {
 }
 
 function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
+  const PAYMENT_REFRESH_INTERVAL_MS = 60000;
+  const PAYMENT_SUCCESS_MESSAGE_MS = 5000;
   let paymentOptions = null;
   let payments = [];
   let rewardSummary = {
@@ -329,6 +331,8 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   let activeFreeEntryRequest = null;
   let paymentsRequest = null;
   let paymentRefreshTimeout = null;
+  let paymentSuccessTimeout = null;
+  let paymentRefreshStarted = false;
   let paymentInstructions = null;
   let paymentInstructionsUnavailable = false;
 
@@ -380,6 +384,67 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       return null;
     }
     return payments.find((payment) => ['pending', 'approved'].indexOf(payment.status) !== -1 && payment.weekId === paymentOptions.week.weekId) || null;
+  }
+
+  function currentWeekPaymentFrom(list, statuses) {
+    if (!paymentOptions || !paymentOptions.week) {
+      return null;
+    }
+    return list.find((payment) => statuses.indexOf(payment.status) !== -1 && payment.weekId === paymentOptions.week.weekId) || null;
+  }
+
+  function clearPaymentSuccessTimeout() {
+    if (paymentSuccessTimeout !== null) {
+      window.clearTimeout(paymentSuccessTimeout);
+      paymentSuccessTimeout = null;
+    }
+  }
+
+  function showTemporaryPaymentSuccess() {
+    clearPaymentSuccessTimeout();
+    message.classList.remove('error-text');
+    message.textContent = 'Payment received. Your entry sheet is ready.';
+    paymentSuccessTimeout = window.setTimeout(() => {
+      if (message.textContent === 'Payment received. Your entry sheet is ready.') {
+        message.textContent = '';
+      }
+      paymentSuccessTimeout = null;
+    }, PAYMENT_SUCCESS_MESSAGE_MS);
+  }
+
+  function isPaymentStatusMessage(value) {
+    if (value.startsWith('Payment request submitted. The manager must approve it')) {
+      return true;
+    }
+    return [
+      'Payment request submitted. Waiting for manager approval.',
+      'Payment approved. Complete payment using the instructions shown.',
+    ].includes(value);
+  }
+
+  function reconcilePaymentMessage(previousPayments, nextPayments) {
+    const activeRequest = currentWeekPaymentFrom(nextPayments, ['pending', 'approved']);
+    if (activeRequest) {
+      clearPaymentSuccessTimeout();
+      message.classList.remove('error-text');
+      message.textContent = activeRequest.status === 'approved'
+        ? 'Payment approved. Complete payment using the instructions shown.'
+        : 'Payment request submitted. Waiting for manager approval.';
+    }
+
+    const previousActiveRequest = currentWeekPaymentFrom(previousPayments, ['pending', 'approved']);
+    if (!activeRequest && isPaymentStatusMessage(message.textContent)) {
+      clearPaymentSuccessTimeout();
+      message.classList.remove('error-text');
+      message.textContent = '';
+    }
+    if (previousActiveRequest) {
+      const resolvedPayment = nextPayments.find((payment) => payment.paymentId === previousActiveRequest.paymentId);
+      if (resolvedPayment && resolvedPayment.status === 'paid') {
+        showTemporaryPaymentSuccess();
+        entrySheets.refresh();
+      }
+    }
   }
 
   function renderPaymentInstructions(created = false) {
@@ -549,7 +614,9 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       } catch (error) {
         rewardSummary = { unusedFreeEntries: 0 };
       }
-      message.textContent = '';
+      if (!activeRequestForCurrentWeek()) {
+        message.textContent = '';
+      }
       message.classList.remove('error-text');
       populateOptions();
       renderHistory();
@@ -580,18 +647,16 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
         const data = initialBootstrapRequest
           ? await playerDashboardBootstrapSection(initialBootstrapRequest, 'payments')
           : (await playerAction('player.payments.list')).data;
+        const previousPayments = payments;
         const nextPayments = data.payments || [];
-        const paidPaymentReceived = payments.some((payment) => payment.status !== 'paid' &&
-          nextPayments.some((nextPayment) => nextPayment.paymentId === payment.paymentId && nextPayment.status === 'paid'));
         payments = nextPayments;
         applyPaymentInstructionResponse(data, preserveCreated);
         paymentsLoaded = true;
         historyStatus.classList.remove('error-text');
         renderHistory();
         updateFormAvailability();
-        if (paidPaymentReceived) {
-          entrySheets.refresh();
-        }
+        reconcilePaymentMessage(previousPayments, nextPayments);
+        updatePaymentHistoryRefresh();
       } catch (error) {
         if (!background) {
           paymentsLoaded = false;
@@ -625,29 +690,58 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       paymentRefreshTimeout = null;
     }
     document.removeEventListener('visibilitychange', handlePaymentVisibilityChange);
+    window.removeEventListener('focus', handlePaymentFocus);
+    paymentRefreshStarted = false;
+  }
+
+  function clearPaymentHistoryRefreshTimer() {
+    if (paymentRefreshTimeout !== null) {
+      window.clearTimeout(paymentRefreshTimeout);
+      paymentRefreshTimeout = null;
+    }
   }
 
   function schedulePaymentHistoryRefresh() {
+    if (paymentRefreshTimeout !== null || !dashboardRefreshConnected() || !activeRequestForCurrentWeek()) {
+      return;
+    }
     paymentRefreshTimeout = window.setTimeout(async () => {
       paymentRefreshTimeout = null;
       if (!dashboardRefreshConnected()) {
         stopPaymentHistoryRefresh();
         return;
       }
-      const refreshes = [];
-      if (paymentCardsConnected()) {
-        refreshes.push(loadPayments(null, true));
+      if (paymentCardsConnected() && activeRequestForCurrentWeek()) {
+        await loadPayments(null, true);
       }
-      if (entrySheets.isConnected()) {
-        refreshes.push(entrySheets.refresh());
-      }
-      await Promise.all(refreshes);
-      if (dashboardRefreshConnected()) {
+      if (dashboardRefreshConnected() && activeRequestForCurrentWeek()) {
         schedulePaymentHistoryRefresh();
       } else {
-        stopPaymentHistoryRefresh();
+        clearPaymentHistoryRefreshTimer();
       }
-    }, 60000);
+    }, PAYMENT_REFRESH_INTERVAL_MS);
+  }
+
+  function updatePaymentHistoryRefresh() {
+    if (!dashboardRefreshConnected()) {
+      stopPaymentHistoryRefresh();
+      return;
+    }
+    if (activeRequestForCurrentWeek()) {
+      schedulePaymentHistoryRefresh();
+      return;
+    }
+    clearPaymentHistoryRefreshTimer();
+  }
+
+  function refreshPaymentsWhenUnresolved() {
+    if (!dashboardRefreshConnected()) {
+      stopPaymentHistoryRefresh();
+      return;
+    }
+    if (paymentCardsConnected() && activeRequestForCurrentWeek()) {
+      loadPayments(null, true);
+    }
   }
 
   function handlePaymentVisibilityChange() {
@@ -656,22 +750,27 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       return;
     }
     if (document.visibilityState === 'visible') {
-      if (paymentCardsConnected()) {
-        loadPayments(null, true);
-      }
-      if (entrySheets.isConnected()) {
-        entrySheets.refresh();
-      }
+      refreshPaymentsWhenUnresolved();
     }
   }
 
+  function handlePaymentFocus() {
+    refreshPaymentsWhenUnresolved();
+  }
+
   function startPaymentHistoryRefresh() {
+    if (paymentRefreshStarted) {
+      updatePaymentHistoryRefresh();
+      return;
+    }
+    paymentRefreshStarted = true;
     document.addEventListener('visibilitychange', handlePaymentVisibilityChange);
+    window.addEventListener('focus', handlePaymentFocus);
     window.setTimeout(() => {
-      if (dashboardRefreshConnected()) {
+      if (dashboardRefreshConnected() && activeRequestForCurrentWeek()) {
         schedulePaymentHistoryRefresh();
       } else {
-        stopPaymentHistoryRefresh();
+        clearPaymentHistoryRefreshTimer();
       }
     }, 0);
   }
@@ -762,7 +861,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       }
       applyPaymentInstructionResponse(result.data, true);
       clearLogicalRequest();
-      message.textContent = 'Payment request submitted. The manager must approve it and mark it paid before your entries are created.';
+      message.textContent = 'Payment request submitted. Waiting for manager approval.';
       await loadPayments(null, false, true);
     } catch (error) {
       message.textContent = error.message;
@@ -1104,6 +1203,49 @@ function createThisWeekHelper(bootstrapRequest, entrySheets) {
   return card;
 }
 
+function createDashboardMoraleCard(bootstrapRequest) {
+  const card = createElement('section', { className: 'state-card compact-card this-week-helper' });
+  const body = createElement('div');
+  card.hidden = true;
+
+  function playerCountLabel(count) {
+    return `${count} Registered ${count === 1 ? 'Player' : 'Players'}`;
+  }
+
+  function render(data) {
+    const registeredPlayerCount = Number(data.leagueSummary && data.leagueSummary.registeredPlayerCount);
+    const thisWeek = data.entrySheets && data.entrySheets.thisWeek;
+    const showCount = Number.isSafeInteger(registeredPlayerCount) && registeredPlayerCount >= 0;
+    const showPreseason = thisWeek && thisWeek.seasonType === 'preseason';
+    body.replaceChildren();
+    if (!showCount && !showPreseason) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    if (showCount) {
+      body.appendChild(createElement('p', { className: 'status-pill status-pill-muted', text: `👥 ${playerCountLabel(registeredPlayerCount)}` }));
+    }
+    if (showPreseason) {
+      body.appendChild(createElement('p', { className: 'eyebrow', text: 'PRESEASON IS FREE 🏈' }));
+      body.appendChild(createElement('p', { className: 'muted', text: 'Preseason is free to play. Real-money prize pots begin with the regular season.' }));
+    }
+  }
+
+  card.appendChild(body);
+  bootstrapRequest
+    .then((result) => {
+      const sections = result.data || {};
+      const leagueSummary = sections.leagueSummary && sections.leagueSummary.ok === true ? sections.leagueSummary.data : null;
+      const entrySheets = sections.entrySheets && sections.entrySheets.ok === true ? sections.entrySheets.data : null;
+      render({ leagueSummary, entrySheets });
+    })
+    .catch(() => {
+      card.hidden = true;
+    });
+  return card;
+}
+
 export function createPlayerDashboardView(context = {}) {
   const player = context.player || {};
   const wrapper = createElement('main', { className: 'page-container' });
@@ -1119,6 +1261,7 @@ export function createPlayerDashboardView(context = {}) {
   const dashboardGrid = createElement('section', { className: 'player-dashboard-grid' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
   const entrySheets = createEntrySheetsCard(bootstrapRequest);
+  const moraleCard = createDashboardMoraleCard(bootstrapRequest);
   const thisWeekHelper = createThisWeekHelper(bootstrapRequest, entrySheets);
   const inviteFriends = createInviteFriendsCard(player, bootstrapRequest);
   const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends);
@@ -1150,6 +1293,7 @@ export function createPlayerDashboardView(context = {}) {
   ]);
   appendChildren(wrapper, [
     card,
+    moraleCard,
     thisWeekHelper,
     dashboardGrid,
   ]);

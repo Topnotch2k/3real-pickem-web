@@ -456,6 +456,56 @@ h1 {
   margin-top: 0;
 }
 
+.payment-instructions {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  border: 1px solid rgba(217, 173, 50, 0.72);
+  border-radius: var(--radius-lg);
+  background: rgba(7, 9, 7, 0.92);
+  padding: var(--space-4);
+}
+
+.payment-instructions[hidden] {
+  display: none;
+}
+
+.payment-instructions p {
+  margin: 0;
+}
+
+.payment-instructions-amount {
+  color: var(--color-gold-soft);
+  font-size: 1.15rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.payment-instructions-label {
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.payment-instructions-destination,
+.payment-instructions-unavailable {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.payment-instructions-actions {
+  align-items: center;
+  margin-top: 0;
+}
+
+.payment-instructions-copy-status {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .player-workspace {
   display: grid;
   gap: var(--space-4);
