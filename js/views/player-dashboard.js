@@ -97,7 +97,7 @@ function formatCentralTime(value) {
   }).format(date);
   const parts = formatted.split(', ');
   if (parts.length >= 3) {
-    return `${parts[0]}, ${parts[1]} · ${parts.slice(2).join(', ')} CT`;
+    return `${parts[0]}, ${parts[1]} \u00B7 ${parts.slice(2).join(', ')} CT`;
   }
   return `${formatted} CT`;
 }
@@ -1254,7 +1254,7 @@ function loadRegisteredPlayerCount(bootstrapRequest, countPill) {
         return;
       }
       countPill.hidden = false;
-      countPill.textContent = `ðŸ‘¥ ${registeredPlayerCountLabel(registeredPlayerCount)}`;
+      countPill.textContent = `\u{1F465} ${registeredPlayerCountLabel(registeredPlayerCount)}`;
     })
     .catch(() => {
       countPill.hidden = true;
@@ -1271,7 +1271,7 @@ export function createPlayerDashboardView(context = {}) {
   const actions = createElement('div', { className: 'player-dashboard-summary-actions' });
   const avatar = createElement('span', { className: 'player-avatar large-avatar', text: player.avatar || 'football' });
   const status = createElement('span', { className: 'status-pill', text: player.status || 'active' });
-  const accent = createElement('span', { className: 'player-dashboard-accent', text: '🏈' });
+  const accent = createElement('span', { className: 'player-dashboard-accent', text: '\u{1F3C8}' });
   const registeredPlayers = createElement('span', { className: 'status-pill status-pill-muted', attributes: { hidden: 'hidden' } });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
   const dashboardGrid = createElement('section', { className: 'player-dashboard-grid' });
