@@ -1,7 +1,7 @@
-import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260813-2';
-import { requestAction } from '../api.js?v=20260813-2';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-2';
-import { navigateTo } from '../router.js?v=20260813-2';
+import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260813-3';
+import { requestAction } from '../api.js?v=20260813-3';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-3';
+import { navigateTo } from '../router.js?v=20260813-3';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -89,12 +89,16 @@ function renderMessageThread(messages) {
   return list;
 }
 
-function createManagerMessagePanel(player, onClose, onThreadChanged = () => {}, markUnreadOnOpen = true) {
+function createManagerMessagePanel(player, players = [], onClose, onThreadChanged = () => {}, markUnreadOnOpen = true, unreadLookup = () => 0) {
   let messages = [];
+  let recipientValue = player ? player.playerId : 'all';
+  const activePlayers = players.filter((row) => String(row.status || 'active').toLowerCase() === 'active');
   const panel = createElement('section', { className: 'state-card compact-card' });
   const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+  const broadcastNotice = createElement('p', { className: 'muted' });
   const thread = createElement('section');
   const form = createElement('form', { className: 'auth-form' });
+  const recipient = createElement('select', { attributes: { name: 'recipient' } });
   const textarea = createElement('textarea', {
     attributes: { name: 'message', maxlength: '1000', rows: '4', placeholder: 'Write a message to this player' },
   });
@@ -102,18 +106,49 @@ function createManagerMessagePanel(player, onClose, onThreadChanged = () => {}, 
   const close = createElement('button', { className: 'secondary-button', text: 'Close', attributes: { type: 'button' } });
   const buttons = createElement('div', { className: 'button-row' });
 
+  function selectedPlayer() {
+    return players.find((row) => row.playerId === recipientValue) || null;
+  }
+
   function render() {
-    thread.replaceChildren(renderMessageThread(messages));
+    recipient.replaceChildren(createElement('option', { text: `All Active Players (${activePlayers.length})`, attributes: { value: 'all' } }));
+    const currentPlayer = selectedPlayer();
+    if (currentPlayer && String(currentPlayer.status || 'active').toLowerCase() !== 'active') {
+      recipient.appendChild(createElement('option', { text: `${currentPlayer.displayName || 'Unnamed player'} (Inactive)`, attributes: { value: currentPlayer.playerId, disabled: 'disabled' } }));
+    }
+    activePlayers.forEach((row) => {
+      recipient.appendChild(createElement('option', { text: row.displayName || 'Unnamed player', attributes: { value: row.playerId } }));
+    });
+    recipient.value = recipientValue;
+    const isBroadcast = recipientValue === 'all';
+    const isInactiveThread = Boolean(currentPlayer && String(currentPlayer.status || 'active').toLowerCase() !== 'active');
+    textarea.placeholder = isBroadcast ? 'Write a message to all active players' : 'Write a message to this player';
+    broadcastNotice.textContent = isBroadcast ? `This message will be sent to ${activePlayers.length} active players.` : '';
+    if (isInactiveThread) {
+      broadcastNotice.textContent = 'This inactive player thread is read-only.';
+    }
+    textarea.disabled = isInactiveThread;
+    send.disabled = isInactiveThread;
+    thread.replaceChildren();
+    if (!isBroadcast) {
+      thread.appendChild(renderMessageThread(messages));
+    }
   }
 
   async function load() {
+    const currentPlayer = selectedPlayer();
+    if (!currentPlayer) {
+      messages = [];
+      render();
+      return;
+    }
     status.textContent = 'Loading messages...';
     status.classList.remove('error-text');
     try {
-      const result = await managerAction('manager.messages.list', { playerId: player.playerId });
+      const result = await managerAction('manager.messages.list', { playerId: currentPlayer.playerId });
       messages = result.data.messages || [];
       if (markUnreadOnOpen) {
-        await managerAction('manager.messages.markRead', { playerId: player.playerId });
+        await managerAction('manager.messages.markRead', { playerId: currentPlayer.playerId });
         markUnreadOnOpen = false;
         await onThreadChanged();
       }
@@ -131,11 +166,23 @@ function createManagerMessagePanel(player, onClose, onThreadChanged = () => {}, 
     status.textContent = 'Sending message...';
     status.classList.remove('error-text');
     try {
-      await managerAction('manager.messages.send', {
-        playerId: player.playerId,
-        body: textarea.value,
-        clientRequestId: createClientRequestId('manager-message'),
-      });
+      if (recipientValue === 'all') {
+        const result = await managerAction('manager.messages.broadcast', {
+          body: textarea.value,
+          clientRequestId: createClientRequestId('manager-message-broadcast'),
+        });
+        const recipientCount = Number(result.data.recipientCount || 0);
+        status.textContent = `Message sent to ${recipientCount} active players.`;
+        textarea.value = '';
+        return;
+      } else {
+        await managerAction('manager.messages.send', {
+          playerId: recipientValue,
+          body: textarea.value,
+          clientRequestId: createClientRequestId('manager-message'),
+        });
+        status.textContent = '';
+      }
       textarea.value = '';
       await load();
       await onThreadChanged();
@@ -147,9 +194,17 @@ function createManagerMessagePanel(player, onClose, onThreadChanged = () => {}, 
     }
   });
 
+  recipient.addEventListener('change', () => {
+    recipientValue = recipient.value;
+    const currentPlayer = selectedPlayer();
+    markUnreadOnOpen = currentPlayer ? unreadLookup(currentPlayer.playerId) > 0 : false;
+    status.textContent = '';
+    load();
+  });
+
   close.addEventListener('click', onClose);
   appendChildren(buttons, [send, close]);
-  appendChildren(form, [createField('Message', textarea), buttons]);
+  appendChildren(form, [createField('Recipient', recipient), broadcastNotice, createField('Message', textarea), buttons]);
   appendChildren(panel, [
     createElement('p', { className: 'eyebrow', text: 'Messages' }),
     createElement('h2', { text: player.displayName || 'Player' }),
@@ -318,11 +373,11 @@ function createRegisteredPlayersCard(onMessageCountChange = () => {}) {
     messageWorkspace.replaceChildren();
     if (selectedPlayer) {
       const markUnreadOnOpen = unreadForPlayer(selectedPlayer.playerId) > 0;
-      messageWorkspace.appendChild(createManagerMessagePanel(selectedPlayer, () => {
+      messageWorkspace.appendChild(createManagerMessagePanel(selectedPlayer, players, () => {
         selectedPlayer = null;
         loadMessageSummaries();
         render();
-      }, loadMessageSummaries, markUnreadOnOpen));
+      }, loadMessageSummaries, markUnreadOnOpen, unreadForPlayer));
     }
     if (!players.length) {
       list.appendChild(createElement('p', { className: 'muted', text: 'No registered players yet.' }));

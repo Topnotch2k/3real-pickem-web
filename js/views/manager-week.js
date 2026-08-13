@@ -1,6 +1,6 @@
-import { requestAction } from '../api.js?v=20260813-2';
-import { getManagerSessionToken } from '../auth.js?v=20260813-2';
-import { navigateTo } from '../router.js?v=20260813-2';
+import { requestAction } from '../api.js?v=20260813-3';
+import { getManagerSessionToken } from '../auth.js?v=20260813-3';
+import { navigateTo } from '../router.js?v=20260813-3';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
