@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260813-3';
-import { requestAction } from '../api.js?v=20260813-3';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-3';
-import { navigateTo } from '../router.js?v=20260813-3';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260813-4';
+import { requestAction } from '../api.js?v=20260813-4';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-4';
+import { navigateTo } from '../router.js?v=20260813-4';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -1253,6 +1253,88 @@ function createPlayerMessagesCard(onUnreadChange = () => {}) {
   return card;
 }
 
+function createNotificationSettingsCard(player = {}) {
+  const card = createElement('section', { className: 'state-card compact-card' });
+  const form = createElement('form', { className: 'auth-form' });
+  const emailInput = createElement('input', {
+    attributes: {
+      name: 'email',
+      type: 'email',
+      autocomplete: 'email',
+      maxlength: '254',
+      placeholder: 'Optional',
+    },
+  });
+  const optIn = createElement('input', {
+    attributes: {
+      name: 'emailNotificationsEnabled',
+      type: 'checkbox',
+    },
+  });
+  const optInLabel = createElement('label', { className: 'muted' });
+  const save = createElement('button', { className: 'secondary-button', text: 'Save', attributes: { type: 'submit' } });
+  const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+
+  function applySettings(settings) {
+    emailInput.value = settings.email || '';
+    optIn.checked = Boolean(settings.emailNotificationsEnabled);
+  }
+
+  async function load() {
+    applySettings(player);
+    try {
+      const result = await playerAction('player.notifications.get');
+      applySettings(result.data || {});
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    }
+  }
+
+  appendChildren(optInLabel, [
+    optIn,
+    createElement('span', { text: 'Email me league notifications' }),
+  ]);
+  appendChildren(form, [
+    createField('Email', emailInput),
+    optInLabel,
+    save,
+    status,
+  ]);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.classList.remove('error-text');
+    status.textContent = 'Saving...';
+    save.disabled = true;
+    try {
+      if (optIn.checked && !emailInput.value.trim()) {
+        throw new Error('Enter an email address to enable notifications.');
+      }
+      const result = await playerAction('player.notifications.update', {
+        email: emailInput.value,
+        emailNotificationsEnabled: optIn.checked,
+      });
+      applySettings(result.data || {});
+      status.textContent = 'Notification settings saved.';
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    } finally {
+      save.disabled = false;
+    }
+  });
+
+  appendChildren(card, [
+    createElement('p', { className: 'eyebrow', text: 'Notifications' }),
+    createElement('h2', { text: 'Email Alerts' }),
+    createElement('p', { className: 'muted', text: 'Email is optional. Turn alerts on only when you want league updates by email.' }),
+    form,
+  ]);
+  load();
+  return card;
+}
+
 function createThisWeekHelper(bootstrapRequest, entrySheets) {
   const card = createElement('section', { className: 'state-card compact-card this-week-helper' });
   const body = createElement('div');
@@ -1405,6 +1487,7 @@ export function createPlayerDashboardView(context = {}) {
     messageBell.className = count > 0 ? 'secondary-button status-pill picks-board-correct' : 'secondary-button status-pill status-pill-muted';
     messageBell.setAttribute('aria-label', count > 0 ? `Open messages, ${count} unread` : 'Open messages');
   });
+  const notificationSettings = createNotificationSettingsCard(player);
   const inviteFriends = createInviteFriendsCard(player, bootstrapRequest);
   const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends);
 
@@ -1447,6 +1530,7 @@ export function createPlayerDashboardView(context = {}) {
     paymentWorkspace.requestCard,
     paymentWorkspace.historyCard,
     messagesCard,
+    notificationSettings,
     entrySheets.card,
     inviteFriends.card,
   ]);

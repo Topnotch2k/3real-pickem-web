@@ -1,6 +1,6 @@
-import { requestAction } from '../api.js?v=20260813-3';
-import { captureInviteParamsFromHash, clearInviteParamsFromHash } from '../invite.js?v=20260813-3';
-import { navigateTo } from '../router.js?v=20260813-3';
+import { requestAction } from '../api.js?v=20260813-4';
+import { captureInviteParamsFromHash, clearInviteParamsFromHash } from '../invite.js?v=20260813-4';
+import { navigateTo } from '../router.js?v=20260813-4';
 
 const AVATARS = [
   { value: 'football', label: 'Football' },
@@ -99,6 +99,26 @@ export function createPlayerRegisterView() {
       required: 'required',
     },
   });
+  const emailInput = createElement('input', {
+    attributes: {
+      name: 'email',
+      type: 'email',
+      autocomplete: 'email',
+      maxlength: '254',
+      placeholder: 'Optional',
+    },
+  });
+  const emailOptIn = createElement('input', {
+    attributes: {
+      name: 'emailNotificationsEnabled',
+      type: 'checkbox',
+    },
+  });
+  const emailOptInLabel = createElement('label', { className: 'muted' });
+  appendChildren(emailOptInLabel, [
+    emailOptIn,
+    createElement('span', { text: 'Email me league notifications' }),
+  ]);
   const avatarSelect = createAvatarSelect();
   const message = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const buttons = createElement('div', { className: 'button-row' });
@@ -112,6 +132,8 @@ export function createPlayerRegisterView() {
   appendChildren(buttons, [submit, login]);
   appendChildren(form, [
     createField('Display name', nameInput),
+    createField('Email', emailInput),
+    emailOptInLabel,
     createField('Preset avatar', avatarSelect),
     buttons,
     message,
@@ -124,12 +146,17 @@ export function createPlayerRegisterView() {
     submit.disabled = true;
     login.disabled = true;
     try {
+      if (emailOptIn.checked && !emailInput.value.trim()) {
+        throw new Error('Enter an email address to enable notifications.');
+      }
       const result = await requestAction('player.register', {
         inviteToken: inviteParams.inviteToken,
         referralCode: inviteParams.referralCode,
         inviteCode: inviteParams.inviteCode,
         displayName: nameInput.value,
         avatar: avatarSelect.value,
+        email: emailInput.value,
+        emailNotificationsEnabled: emailOptIn.checked,
       });
       oneTimePin = result.data.oneTimePin || '';
       registeredName = result.data.player ? result.data.player.displayName : nameInput.value.trim();

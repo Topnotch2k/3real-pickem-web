@@ -1,4 +1,4 @@
-import { APP_CONFIG } from './config.js?v=20260813-3';
+import { APP_CONFIG } from './config.js?v=20260813-4';
 
 const READ_ONLY_ACTIONS = new Set([
   'public.health',
@@ -13,6 +13,7 @@ const READ_ONLY_ACTIONS = new Set([
   'player.dashboard.bootstrap',
   'player.invite.get',
   'player.messages.list',
+  'player.notifications.get',
   'player.payment.options',
   'player.payments.list',
   'player.week.entrySheets',
