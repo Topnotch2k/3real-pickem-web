@@ -1,7 +1,8 @@
-import { getManagerSessionToken } from '../auth.js?v=20260813-4';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260813-4';
-import { requestAction } from '../api.js?v=20260813-4';
-import { navigateTo } from '../router.js?v=20260813-4';
+import { getManagerSessionToken } from '../auth.js?v=20260813-5';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260813-5';
+import { requestAction } from '../api.js?v=20260813-5';
+import { navigateTo } from '../router.js?v=20260813-5';
+import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260813-5';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -453,7 +454,13 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     controls,
     message,
   ]);
-  appendChildren(wrapper, [leadersRegion, header, boardRegion, leaderboardRegion]);
+  appendChildren(wrapper, [
+    actor === 'manager' ? createManagerNav('manager-everybodys-picks') : createPlayerNav('player-everybodys-picks'),
+    leadersRegion,
+    header,
+    boardRegion,
+    leaderboardRegion,
+  ]);
   loadBoard();
   return wrapper;
 }

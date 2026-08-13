@@ -181,6 +181,20 @@ h1 {
   gap: var(--space-3);
 }
 
+.top-route-nav {
+  display: flex;
+  gap: var(--space-2);
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+  -webkit-overflow-scrolling: touch;
+}
+
+.top-route-nav button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .picks-board-actions {
   display: grid;
   gap: var(--space-2);
@@ -637,6 +651,16 @@ h1 {
 
   .player-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 720px) and (max-width: 900px) and (orientation: landscape) {
+  .picks-board-controls {
+    grid-template-columns: minmax(12rem, 1fr);
+  }
+
+  .picks-board-actions {
+    grid-column: 1 / -1;
   }
 }
 

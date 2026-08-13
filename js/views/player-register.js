@@ -1,6 +1,6 @@
-import { requestAction } from '../api.js?v=20260813-4';
-import { captureInviteParamsFromHash, clearInviteParamsFromHash } from '../invite.js?v=20260813-4';
-import { navigateTo } from '../router.js?v=20260813-4';
+import { requestAction } from '../api.js?v=20260813-5';
+import { captureInviteParamsFromHash, clearInviteParamsFromHash } from '../invite.js?v=20260813-5';
+import { navigateTo } from '../router.js?v=20260813-5';
 
 const AVATARS = [
   { value: 'football', label: 'Football' },

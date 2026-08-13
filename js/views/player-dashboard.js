@@ -1,7 +1,8 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260813-4';
-import { requestAction } from '../api.js?v=20260813-4';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-4';
-import { navigateTo } from '../router.js?v=20260813-4';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260813-5';
+import { requestAction } from '../api.js?v=20260813-5';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-5';
+import { navigateTo } from '../router.js?v=20260813-5';
+import { createPlayerNav } from '../navigation.js?v=20260813-5';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -181,7 +182,7 @@ function createClientRequestId() {
   return `payment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-function createInviteFriendsCard(player, bootstrapRequest) {
+export function createInviteFriendsCard(player, bootstrapRequest) {
   let inviteData = null;
   let referrals = [];
   let rewardSummary = {
@@ -344,7 +345,7 @@ function createInviteFriendsCard(player, bootstrapRequest) {
   };
 }
 
-function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
+export function createPaymentWorkspace(bootstrapRequest, options = {}) {
   const PAYMENT_REFRESH_INTERVAL_MS = 60000;
   const PAYMENT_SUCCESS_MESSAGE_MS = 5000;
   let paymentOptions = null;
@@ -470,7 +471,9 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       const resolvedPayment = nextPayments.find((payment) => payment.paymentId === previousActiveRequest.paymentId);
       if (resolvedPayment && resolvedPayment.status === 'paid') {
         showTemporaryPaymentSuccess();
-        entrySheets.refresh();
+        if (typeof options.refreshEntrySheets === 'function') {
+          options.refreshEntrySheets();
+        }
       }
     }
   }
@@ -709,7 +712,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   }
 
   function dashboardRefreshConnected() {
-    return paymentCardsConnected() || entrySheets.isConnected();
+    return paymentCardsConnected();
   }
 
   function stopPaymentHistoryRefresh() {
@@ -844,8 +847,8 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
       message.textContent = 'Free entry redeemed. Your new entry sheet is ready.';
       updateFormAvailability();
       await Promise.all([
-        entrySheets.refresh(),
-        inviteFriends.refresh(),
+        typeof options.refreshEntrySheets === 'function' ? options.refreshEntrySheets() : Promise.resolve(),
+        typeof options.refreshInviteFriends === 'function' ? options.refreshInviteFriends() : Promise.resolve(),
       ]);
       updateFormAvailability();
     } catch (error) {
@@ -940,7 +943,7 @@ function createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends) {
   return { requestCard, historyCard };
 }
 
-function createEntrySheetsCard(bootstrapRequest) {
+export function createEntrySheetsCard(bootstrapRequest) {
   let entrySheetsRequest = null;
   let entrySheetsRefreshQueued = false;
   let entrySheetFilter = 'current';
@@ -1162,10 +1165,10 @@ function createEntrySheetsCard(bootstrapRequest) {
   };
 }
 
-function createPlayerMessagesCard(onUnreadChange = () => {}) {
+export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}) {
   let messages = [];
   let unreadCount = 0;
-  let open = false;
+  let open = Boolean(options.open);
   const card = createElement('section', { className: 'state-card compact-card' });
   const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const thread = createElement('section');
@@ -1249,11 +1252,11 @@ function createPlayerMessagesCard(onUnreadChange = () => {}) {
   };
   card.refreshMessages = () => load(false);
   render();
-  load(false);
+  load(open);
   return card;
 }
 
-function createNotificationSettingsCard(player = {}) {
+export function createNotificationSettingsCard(player = {}) {
   const card = createElement('section', { className: 'state-card compact-card' });
   const form = createElement('form', { className: 'auth-form' });
   const emailInput = createElement('input', {
@@ -1335,13 +1338,16 @@ function createNotificationSettingsCard(player = {}) {
   return card;
 }
 
-function createThisWeekHelper(bootstrapRequest, entrySheets) {
+export function createThisWeekHelper(bootstrapRequest, entrySheets = null) {
   const card = createElement('section', { className: 'state-card compact-card this-week-helper' });
   const body = createElement('div');
   card.hidden = true;
 
   function openEntrySheets() {
-    if (!entrySheets.card.isConnected) return;
+    if (!entrySheets || !entrySheets.card || !entrySheets.card.isConnected) {
+      navigateTo('player-picks');
+      return;
+    }
     entrySheets.card.scrollIntoView({ block: 'start' });
     entrySheets.card.focus({ preventScroll: true });
   }
@@ -1404,7 +1410,7 @@ function createThisWeekHelper(bootstrapRequest, entrySheets) {
   return card;
 }
 
-function createDashboardMoraleCard(bootstrapRequest) {
+export function createDashboardMoraleCard(bootstrapRequest) {
   const card = createElement('section', { className: 'state-card compact-card this-week-helper' });
   const body = createElement('div');
   card.hidden = true;
@@ -1476,20 +1482,27 @@ export function createPlayerDashboardView(context = {}) {
   const messageBell = createElement('button', { className: 'secondary-button status-pill status-pill-muted', text: '\u{1F514}', attributes: { type: 'button', 'aria-label': 'Open messages' } });
   const registeredPlayers = createElement('span', { className: 'status-pill status-pill-muted', attributes: { hidden: 'hidden' } });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
-  const dashboardGrid = createElement('section', { className: 'player-dashboard-grid' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
-  const entrySheets = createEntrySheetsCard(bootstrapRequest);
   const moraleCard = createDashboardMoraleCard(bootstrapRequest);
-  const thisWeekHelper = createThisWeekHelper(bootstrapRequest, entrySheets);
-  const messagesCard = createPlayerMessagesCard((unreadCount) => {
+  const thisWeekHelper = createThisWeekHelper(bootstrapRequest);
+  const overview = createElement('section', { className: 'state-card compact-card' });
+
+  function updateMessageBell(unreadCount) {
     const count = Number(unreadCount || 0);
     messageBell.textContent = count > 0 ? `\u{1F514} ${count}` : '\u{1F514}';
     messageBell.className = count > 0 ? 'secondary-button status-pill picks-board-correct' : 'secondary-button status-pill status-pill-muted';
     messageBell.setAttribute('aria-label', count > 0 ? `Open messages, ${count} unread` : 'Open messages');
-  });
-  const notificationSettings = createNotificationSettingsCard(player);
-  const inviteFriends = createInviteFriendsCard(player, bootstrapRequest);
-  const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends);
+  }
+
+  async function loadMessageBellCount() {
+    try {
+      const result = await playerAction('player.messages.list');
+      if (!wrapper.isConnected) return;
+      updateMessageBell(Number(result.data.unreadManagerMessageCount || 0));
+    } catch {
+      updateMessageBell(0);
+    }
+  }
 
   logout.addEventListener('click', async () => {
     logout.disabled = true;
@@ -1497,23 +1510,8 @@ export function createPlayerDashboardView(context = {}) {
     navigateTo('player-login');
   });
   messageBell.addEventListener('click', () => {
-    messagesCard.openMessages();
+    navigateTo('player-messages');
   });
-
-  function refreshMessagesOnFocus() {
-    if (!wrapper.isConnected) {
-      document.removeEventListener('visibilitychange', handleMessageVisibilityChange);
-      window.removeEventListener('focus', refreshMessagesOnFocus);
-      return;
-    }
-    messagesCard.refreshMessages();
-  }
-
-  function handleMessageVisibilityChange() {
-    if (document.visibilityState === 'visible') {
-      refreshMessagesOnFocus();
-    }
-  }
 
   appendChildren(summaryIntro, [
     createElement('p', { className: 'eyebrow', text: 'Player Dashboard' }),
@@ -1526,25 +1524,22 @@ export function createPlayerDashboardView(context = {}) {
   appendChildren(actions, [accent, messageBell, registeredPlayers, logout]);
   loadRegisteredPlayerCount(bootstrapRequest, registeredPlayers);
   appendChildren(summary, [summaryIntro, identity, actions]);
-  appendChildren(dashboardGrid, [
-    paymentWorkspace.requestCard,
-    paymentWorkspace.historyCard,
-    messagesCard,
-    notificationSettings,
-    entrySheets.card,
-    inviteFriends.card,
+  appendChildren(overview, [
+    createElement('p', { className: 'eyebrow', text: 'Quick Links' }),
+    createElement('h2', { text: 'Ready for this Week' }),
+    createElement('p', { className: 'muted', text: 'Use the tabs above for picks, messages, payments, referrals, league picks, results, and rules.' }),
   ]);
   appendChildren(card, [
     summary,
   ]);
   appendChildren(wrapper, [
+    createPlayerNav('player-dashboard'),
     card,
     moraleCard,
     thisWeekHelper,
-    dashboardGrid,
+    overview,
   ]);
-  document.addEventListener('visibilitychange', handleMessageVisibilityChange);
-  window.addEventListener('focus', refreshMessagesOnFocus);
+  loadMessageBellCount();
   return wrapper;
 }
 

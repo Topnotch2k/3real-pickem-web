@@ -1,6 +1,7 @@
-import { requestAction } from '../api.js?v=20260813-4';
-import { getManagerSessionToken } from '../auth.js?v=20260813-4';
-import { navigateTo } from '../router.js?v=20260813-4';
+import { requestAction } from '../api.js?v=20260813-5';
+import { getManagerSessionToken } from '../auth.js?v=20260813-5';
+import { navigateTo } from '../router.js?v=20260813-5';
+import { createManagerNav } from '../navigation.js?v=20260813-5';
 
 const AVATARS = [
   { value: 'football', label: 'Football' },
@@ -231,7 +232,7 @@ export function createManagerPlayersView() {
     controls,
     message,
   ]);
-  appendChildren(wrapper, [header, dynamicRegion, list]);
+  appendChildren(wrapper, [createManagerNav('manager-players'), header, dynamicRegion, list]);
 
   async function loadPlayers(options = {}) {
     message.classList.remove('error-text');

@@ -1,7 +1,8 @@
-import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260813-4';
-import { requestAction } from '../api.js?v=20260813-4';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-4';
-import { navigateTo } from '../router.js?v=20260813-4';
+import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260813-5';
+import { requestAction } from '../api.js?v=20260813-5';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-5';
+import { navigateTo } from '../router.js?v=20260813-5';
+import { createManagerNav } from '../navigation.js?v=20260813-5';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -89,7 +90,7 @@ function renderMessageThread(messages) {
   return list;
 }
 
-function createManagerMessagePanel(player, players = [], onClose, onThreadChanged = () => {}, markUnreadOnOpen = true, unreadLookup = () => 0) {
+export function createManagerMessagePanel(player, players = [], onClose, onThreadChanged = () => {}, markUnreadOnOpen = true, unreadLookup = () => 0) {
   let messages = [];
   let recipientValue = player ? player.playerId : 'all';
   const activePlayers = players.filter((row) => String(row.status || 'active').toLowerCase() === 'active');
@@ -207,7 +208,7 @@ function createManagerMessagePanel(player, players = [], onClose, onThreadChange
   appendChildren(form, [createField('Recipient', recipient), broadcastNotice, createField('Message', textarea), buttons]);
   appendChildren(panel, [
     createElement('p', { className: 'eyebrow', text: 'Messages' }),
-    createElement('h2', { text: player.displayName || 'Player' }),
+    createElement('h2', { text: player && player.displayName ? player.displayName : 'All Active Players' }),
     status,
     thread,
     form,
@@ -345,7 +346,7 @@ function createInviteCard() {
   return card;
 }
 
-function createRegisteredPlayersCard(onMessageCountChange = () => {}) {
+export function createRegisteredPlayersCard(onMessageCountChange = () => {}) {
   let players = [];
   let conversations = [];
   let selectedPlayer = null;
@@ -476,7 +477,7 @@ function createRegisteredPlayersCard(onMessageCountChange = () => {}) {
   return card;
 }
 
-function createReferralsCard() {
+export function createReferralsCard() {
   let referrals = [];
   let rewardSummaries = [];
   const card = createElement('section', { className: 'state-card' });
@@ -642,9 +643,7 @@ export function createManagerDashboardView(context = {}) {
     navigateTo('manager-everybodys-picks');
   });
   messagesPill.addEventListener('click', () => {
-    const registeredPlayers = wrapper.querySelector('.registered-players-card');
-    if (registeredPlayers && registeredPlayers.openFirstUnreadThread && registeredPlayers.openFirstUnreadThread()) return;
-    if (registeredPlayers) registeredPlayers.scrollIntoView({ block: 'start' });
+    navigateTo('manager-messages');
   });
 
   logoutButton.addEventListener('click', async () => {
@@ -706,13 +705,12 @@ export function createManagerDashboardView(context = {}) {
     createElement('p', { className: 'status-pill', text: `Role: ${manager.role || 'owner'}` }),
     pendingPayments,
     pendingPaymentsStatus,
-    createElement('p', { className: 'muted', text: 'Week, player, and payment management are active. Grading and standings remain out of scope.' }),
+    createElement('p', { className: 'muted', text: 'Use the navigation for players, messages, payments, week controls, referrals, and league pick boards.' }),
     buttonRow,
   ]);
+  wrapper.appendChild(createManagerNav('manager-dashboard'));
   wrapper.appendChild(card);
-  wrapper.appendChild(createRegisteredPlayersCard(updateMessageCount));
   wrapper.appendChild(createInviteCard());
-  wrapper.appendChild(createReferralsCard());
   window.setTimeout(pollPendingPayments, 0);
   window.setTimeout(loadMessageCount, 0);
   return wrapper;

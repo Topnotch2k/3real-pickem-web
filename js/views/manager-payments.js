@@ -1,6 +1,7 @@
-import { requestAction } from '../api.js?v=20260813-4';
-import { getManagerSessionToken } from '../auth.js?v=20260813-4';
-import { navigateTo } from '../router.js?v=20260813-4';
+import { requestAction } from '../api.js?v=20260813-5';
+import { getManagerSessionToken } from '../auth.js?v=20260813-5';
+import { navigateTo } from '../router.js?v=20260813-5';
+import { createManagerNav } from '../navigation.js?v=20260813-5';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -51,6 +52,24 @@ function formatDate(value) {
     return 'Not yet';
   }
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateTimeCt(value) {
+  if (!value) {
+    return 'Not yet';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Not yet';
+  }
+  return `${new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Chicago',
+  }).format(date)} CT`;
 }
 
 function paymentMethodLabel(method) {
@@ -290,7 +309,7 @@ export function createManagerPaymentsView() {
     controls,
     message,
   ]);
-  appendChildren(wrapper, [header, list]);
+  appendChildren(wrapper, [createManagerNav('manager-payments'), header, list]);
 
   async function loadCurrentWeek() {
     const currentVersion = ++weekLoadVersion;
@@ -397,7 +416,7 @@ export function createManagerPaymentsView() {
       ['Entry quantity', String(payment.entriesPaid || 0)],
       ['Amount due', formatMoney(payment.amountDueCents, payment.amountDue)],
       ['Week', String(payment.weekId || 'Unknown')],
-      ['Submitted', formatDate(payment.createdAt)],
+      ['Submitted', formatDateTimeCt(payment.createdAt)],
     ];
     if (payment.status === 'approved') {
       rows.push(['Approved', formatDate(payment.approvedAt)]);
