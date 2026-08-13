@@ -1,7 +1,7 @@
-import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260813-1';
-import { requestAction } from '../api.js?v=20260813-1';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-1';
-import { navigateTo } from '../router.js?v=20260813-1';
+import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260813-2';
+import { requestAction } from '../api.js?v=20260813-2';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-2';
+import { navigateTo } from '../router.js?v=20260813-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -397,6 +397,16 @@ function createRegisteredPlayersCard(onMessageCountChange = () => {}) {
     }
   }
 
+  card.openFirstUnreadThread = () => {
+    const conversation = conversations.find((row) => Number(row.unreadPlayerReplyCount || 0) > 0);
+    const player = conversation ? players.find((row) => row.playerId === conversation.playerId) : null;
+    if (!player) return false;
+    selectedPlayer = player;
+    render();
+    messageWorkspace.scrollIntoView({ block: 'start' });
+    return true;
+  };
+
   appendChildren(card, [
     createElement('p', { className: 'eyebrow', text: 'Registered Players' }),
     createElement('h2', { text: 'Registered Players' }),
@@ -578,6 +588,7 @@ export function createManagerDashboardView(context = {}) {
   });
   messagesPill.addEventListener('click', () => {
     const registeredPlayers = wrapper.querySelector('.registered-players-card');
+    if (registeredPlayers && registeredPlayers.openFirstUnreadThread && registeredPlayers.openFirstUnreadThread()) return;
     if (registeredPlayers) registeredPlayers.scrollIntoView({ block: 'start' });
   });
 
