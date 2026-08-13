@@ -1,7 +1,7 @@
-import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260812-3';
-import { requestAction } from '../api.js?v=20260812-3';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-3';
-import { navigateTo } from '../router.js?v=20260812-3';
+import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260813-1';
+import { requestAction } from '../api.js?v=20260813-1';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-1';
+import { navigateTo } from '../router.js?v=20260813-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -24,8 +24,22 @@ function appendChildren(parent, children) {
   return parent;
 }
 
+function createField(labelText, control) {
+  const label = createElement('label', { className: 'form-field' });
+  label.appendChild(createElement('span', { text: labelText }));
+  label.appendChild(control);
+  return label;
+}
+
 function managerAction(action, payload = {}) {
   return requestAction(action, { ...payload, sessionToken: getManagerSessionToken() });
+}
+
+function createClientRequestId(prefix = 'message') {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 function formatDateTime(value) {
@@ -45,6 +59,107 @@ function formatDate(value) {
     return 'Unavailable';
   }
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date);
+}
+
+function messageTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+}
+
+function renderMessageThread(messages) {
+  const list = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Messages' } });
+  if (!messages.length) {
+    list.appendChild(createElement('p', { className: 'muted', text: 'No messages yet.' }));
+    return list;
+  }
+  messages.forEach((message) => {
+    const item = createElement('article', { className: 'player-card compact-card' });
+    const header = createElement('div', { className: 'player-card-header' });
+    appendChildren(header, [
+      createElement('span', {
+        className: `status-pill ${message.senderRole === 'manager' ? '' : 'status-pill-muted'}`,
+        text: message.senderRole === 'manager' ? 'Manager' : 'Player',
+      }),
+      createElement('small', { className: 'muted', text: messageTime(message.createdAt) }),
+    ]);
+    appendChildren(item, [header, createElement('p', { text: message.body || '' })]);
+    list.appendChild(item);
+  });
+  return list;
+}
+
+function createManagerMessagePanel(player, onClose, onThreadChanged = () => {}, markUnreadOnOpen = true) {
+  let messages = [];
+  const panel = createElement('section', { className: 'state-card compact-card' });
+  const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+  const thread = createElement('section');
+  const form = createElement('form', { className: 'auth-form' });
+  const textarea = createElement('textarea', {
+    attributes: { name: 'message', maxlength: '1000', rows: '4', placeholder: 'Write a message to this player' },
+  });
+  const send = createElement('button', { className: 'primary-button', text: 'Send', attributes: { type: 'submit' } });
+  const close = createElement('button', { className: 'secondary-button', text: 'Close', attributes: { type: 'button' } });
+  const buttons = createElement('div', { className: 'button-row' });
+
+  function render() {
+    thread.replaceChildren(renderMessageThread(messages));
+  }
+
+  async function load() {
+    status.textContent = 'Loading messages...';
+    status.classList.remove('error-text');
+    try {
+      const result = await managerAction('manager.messages.list', { playerId: player.playerId });
+      messages = result.data.messages || [];
+      if (markUnreadOnOpen) {
+        await managerAction('manager.messages.markRead', { playerId: player.playerId });
+        markUnreadOnOpen = false;
+        await onThreadChanged();
+      }
+      status.textContent = '';
+      render();
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    }
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    send.disabled = true;
+    status.textContent = 'Sending message...';
+    status.classList.remove('error-text');
+    try {
+      await managerAction('manager.messages.send', {
+        playerId: player.playerId,
+        body: textarea.value,
+        clientRequestId: createClientRequestId('manager-message'),
+      });
+      textarea.value = '';
+      await load();
+      await onThreadChanged();
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    } finally {
+      send.disabled = false;
+    }
+  });
+
+  close.addEventListener('click', onClose);
+  appendChildren(buttons, [send, close]);
+  appendChildren(form, [createField('Message', textarea), buttons]);
+  appendChildren(panel, [
+    createElement('p', { className: 'eyebrow', text: 'Messages' }),
+    createElement('h2', { text: player.displayName || 'Player' }),
+    status,
+    thread,
+    form,
+  ]);
+  render();
+  load();
+  return panel;
 }
 
 function referralStatusLabel(status) {
@@ -175,8 +290,10 @@ function createInviteCard() {
   return card;
 }
 
-function createRegisteredPlayersCard() {
+function createRegisteredPlayersCard(onMessageCountChange = () => {}) {
   let players = [];
+  let conversations = [];
+  let selectedPlayer = null;
   const card = createElement('section', { className: 'state-card registered-players-card' });
   const status = createElement('p', {
     className: 'muted',
@@ -188,10 +305,25 @@ function createRegisteredPlayersCard() {
     className: 'player-list registered-players-list',
     attributes: { 'aria-label': 'Registered Players' },
   });
+  const messageWorkspace = createElement('section');
+
+  function unreadForPlayer(playerId) {
+    const conversation = conversations.find((row) => row.playerId === playerId);
+    return conversation ? Number(conversation.unreadPlayerReplyCount || 0) : 0;
+  }
 
   function render() {
     total.textContent = `Total: ${players.length}`;
     list.replaceChildren();
+    messageWorkspace.replaceChildren();
+    if (selectedPlayer) {
+      const markUnreadOnOpen = unreadForPlayer(selectedPlayer.playerId) > 0;
+      messageWorkspace.appendChild(createManagerMessagePanel(selectedPlayer, () => {
+        selectedPlayer = null;
+        loadMessageSummaries();
+        render();
+      }, loadMessageSummaries, markUnreadOnOpen));
+    }
     if (!players.length) {
       list.appendChild(createElement('p', { className: 'muted', text: 'No registered players yet.' }));
       return;
@@ -213,6 +345,7 @@ function createRegisteredPlayersCard() {
       const currentWeek = player.currentWeek || null;
       const entryCount = currentWeek ? Number(currentWeek.entryCount || 0) : 0;
       const meta = createElement('dl', { className: 'player-meta' });
+      const unread = unreadForPlayer(player.playerId);
       [
         ['Joined', formatDate(player.profileCreatedAt || player.createdAt)],
         ['Referred By', player.referredBy && player.referredBy.displayName ? player.referredBy.displayName : 'Not referred'],
@@ -222,9 +355,30 @@ function createRegisteredPlayersCard() {
         meta.appendChild(createElement('dt', { text: label }));
         meta.appendChild(createElement('dd', { text: value }));
       });
-      appendChildren(playerCard, [header, meta]);
+      const actions = createElement('div', { className: 'button-row' });
+      const messageButton = createElement('button', { className: 'secondary-button', text: 'Message', attributes: { type: 'button' } });
+      messageButton.addEventListener('click', () => {
+        selectedPlayer = player;
+        render();
+      });
+      actions.appendChild(messageButton);
+      if (unread > 0) {
+        actions.appendChild(createElement('span', { className: 'status-pill', text: `${unread} unread` }));
+      }
+      appendChildren(playerCard, [header, meta, actions]);
       list.appendChild(playerCard);
     });
+  }
+
+  async function loadMessageSummaries() {
+    try {
+      const result = await managerAction('manager.messages.list');
+      conversations = result.data.conversations || [];
+      onMessageCountChange(Number(result.data.totalUnreadPlayerReplyCount || 0));
+      render();
+    } catch {
+      conversations = [];
+    }
   }
 
   async function loadPlayers() {
@@ -248,10 +402,12 @@ function createRegisteredPlayersCard() {
     createElement('h2', { text: 'Registered Players' }),
     total,
     status,
+    messageWorkspace,
     list,
   ]);
   render();
   loadPlayers();
+  loadMessageSummaries();
   return card;
 }
 
@@ -392,6 +548,11 @@ export function createManagerDashboardView(context = {}) {
     className: 'status-pill',
     text: 'Pending Payments: 0',
   });
+  const messagesPill = createElement('button', {
+    className: 'secondary-button',
+    text: 'Messages',
+    attributes: { type: 'button' },
+  });
   const pendingPaymentsStatus = createElement('p', {
     className: 'muted',
     attributes: { role: 'status', 'aria-live': 'polite' },
@@ -414,6 +575,10 @@ export function createManagerDashboardView(context = {}) {
   });
   everybodyPicksButton.addEventListener('click', () => {
     navigateTo('manager-everybodys-picks');
+  });
+  messagesPill.addEventListener('click', () => {
+    const registeredPlayers = wrapper.querySelector('.registered-players-card');
+    if (registeredPlayers) registeredPlayers.scrollIntoView({ block: 'start' });
   });
 
   logoutButton.addEventListener('click', async () => {
@@ -453,7 +618,21 @@ export function createManagerDashboardView(context = {}) {
     }
   }
 
-  appendChildren(buttonRow, [playersButton, paymentsButton, weekButton, everybodyPicksButton, logoutButton]);
+  function updateMessageCount(count) {
+    messagesPill.textContent = count > 0 ? `Messages (${count} unread)` : 'Messages';
+  }
+
+  async function loadMessageCount() {
+    try {
+      const result = await managerAction('manager.messages.list');
+      if (!wrapper.isConnected) return;
+      updateMessageCount(Number(result.data.totalUnreadPlayerReplyCount || 0));
+    } catch {
+      messagesPill.textContent = 'Messages';
+    }
+  }
+
+  appendChildren(buttonRow, [playersButton, paymentsButton, messagesPill, weekButton, everybodyPicksButton, logoutButton]);
   appendChildren(card, [
     createElement('p', { className: 'eyebrow', text: 'League Manager' }),
     createElement('h1', { text: 'Manager Dashboard' }),
@@ -465,10 +644,11 @@ export function createManagerDashboardView(context = {}) {
     buttonRow,
   ]);
   wrapper.appendChild(card);
-  wrapper.appendChild(createRegisteredPlayersCard());
+  wrapper.appendChild(createRegisteredPlayersCard(updateMessageCount));
   wrapper.appendChild(createInviteCard());
   wrapper.appendChild(createReferralsCard());
   window.setTimeout(pollPendingPayments, 0);
+  window.setTimeout(loadMessageCount, 0);
   return wrapper;
 }
 

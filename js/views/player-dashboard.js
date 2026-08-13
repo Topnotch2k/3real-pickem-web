@@ -1,7 +1,7 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260812-3';
-import { requestAction } from '../api.js?v=20260812-3';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260812-3';
-import { navigateTo } from '../router.js?v=20260812-3';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260813-1';
+import { requestAction } from '../api.js?v=20260813-1';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260813-1';
+import { navigateTo } from '../router.js?v=20260813-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -106,6 +106,34 @@ function seasonTypeLabel(value) {
   if (value === 'preseason') return 'Preseason';
   if (value === 'postseason') return 'Postseason';
   return 'Regular Season';
+}
+
+function messageTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+}
+
+function renderMessageThread(messages) {
+  const list = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Messages' } });
+  if (!messages.length) {
+    list.appendChild(createElement('p', { className: 'muted', text: 'No messages yet.' }));
+    return list;
+  }
+  messages.forEach((message) => {
+    const item = createElement('article', { className: 'player-card compact-card' });
+    const header = createElement('div', { className: 'player-card-header' });
+    appendChildren(header, [
+      createElement('span', {
+        className: `status-pill ${message.senderRole === 'manager' ? '' : 'status-pill-muted'}`,
+        text: message.senderRole === 'manager' ? 'Manager' : 'You',
+      }),
+      createElement('small', { className: 'muted', text: messageTime(message.createdAt) }),
+    ]);
+    appendChildren(item, [header, createElement('p', { text: message.body || '' })]);
+    list.appendChild(item);
+  });
+  return list;
 }
 
 function thisWeekLabel(week) {
@@ -1134,6 +1162,89 @@ function createEntrySheetsCard(bootstrapRequest) {
   };
 }
 
+function createPlayerMessagesCard() {
+  let messages = [];
+  let unreadCount = 0;
+  let open = false;
+  const card = createElement('section', { className: 'state-card compact-card' });
+  const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+  const thread = createElement('section');
+  const form = createElement('form', { className: 'auth-form' });
+  const textarea = createElement('textarea', {
+    attributes: { name: 'message', maxlength: '1000', rows: '4', placeholder: 'Reply to the manager' },
+  });
+  const send = createElement('button', { className: 'primary-button', text: 'Send', attributes: { type: 'submit' } });
+  const toggle = createElement('button', { className: 'secondary-button', text: 'Messages', attributes: { type: 'button' } });
+  const actions = createElement('div', { className: 'button-row' });
+
+  function render() {
+    card.replaceChildren();
+    actions.replaceChildren();
+    toggle.textContent = unreadCount > 0 ? `Messages (${unreadCount} unread)` : 'Messages';
+    actions.appendChild(toggle);
+    appendChildren(card, [
+      createElement('p', { className: 'eyebrow', text: 'Messages' }),
+      createElement('h2', { text: 'Messages' }),
+      actions,
+      status,
+    ]);
+    if (!open) return;
+    thread.replaceChildren(renderMessageThread(messages));
+    appendChildren(card, [thread, form]);
+  }
+
+  async function load(markRead = false) {
+    status.textContent = 'Loading messages...';
+    status.classList.remove('error-text');
+    try {
+      const result = await playerAction('player.messages.list');
+      messages = result.data.messages || [];
+      unreadCount = Number(result.data.unreadManagerMessageCount || 0);
+      if (markRead) {
+        await playerAction('player.messages.markRead');
+        unreadCount = 0;
+      }
+      status.textContent = '';
+      render();
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    }
+  }
+
+  toggle.addEventListener('click', () => {
+    open = !open;
+    render();
+    if (open) load(true);
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    send.disabled = true;
+    status.textContent = 'Sending message...';
+    status.classList.remove('error-text');
+    try {
+      await playerAction('player.messages.send', {
+        body: textarea.value,
+        clientRequestId: createClientRequestId(),
+      });
+      textarea.value = '';
+      await load(false);
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    } finally {
+      send.disabled = false;
+    }
+  });
+
+  form.appendChild(createField('Reply', textarea));
+  form.appendChild(send);
+  render();
+  load(false);
+  return card;
+}
+
 function createThisWeekHelper(bootstrapRequest, entrySheets) {
   const card = createElement('section', { className: 'state-card compact-card this-week-helper' });
   const body = createElement('div');
@@ -1279,6 +1390,7 @@ export function createPlayerDashboardView(context = {}) {
   const entrySheets = createEntrySheetsCard(bootstrapRequest);
   const moraleCard = createDashboardMoraleCard(bootstrapRequest);
   const thisWeekHelper = createThisWeekHelper(bootstrapRequest, entrySheets);
+  const messagesCard = createPlayerMessagesCard();
   const inviteFriends = createInviteFriendsCard(player, bootstrapRequest);
   const paymentWorkspace = createPaymentWorkspace(bootstrapRequest, entrySheets, inviteFriends);
 
@@ -1302,6 +1414,7 @@ export function createPlayerDashboardView(context = {}) {
   appendChildren(dashboardGrid, [
     paymentWorkspace.requestCard,
     paymentWorkspace.historyCard,
+    messagesCard,
     entrySheets.card,
     inviteFriends.card,
   ]);
