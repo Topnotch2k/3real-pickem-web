@@ -888,6 +888,62 @@ h1 {
   padding: 0.75rem 0.9rem;
 }
 
+.team-helmet-badge {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(248, 247, 239, 0.78);
+  border-radius: 22px 20px 12px 18px;
+  background: var(--team-primary, #1f241f);
+  box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.18);
+  color: var(--team-contrast, #fff);
+  line-height: 1;
+}
+
+.team-helmet-badge::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  bottom: 3px;
+  width: 14px;
+  height: 10px;
+  border: 2px solid rgba(248, 247, 239, 0.78);
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: transparent;
+}
+
+.team-helmet-code {
+  position: relative;
+  z-index: 1;
+  max-width: 36px;
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.team-helmet-mask {
+  position: absolute;
+  right: 3px;
+  bottom: 5px;
+  width: 15px;
+  height: 8px;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  opacity: 0.75;
+}
+
+.pick-team-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .password-input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -1,7 +1,7 @@
-import { getManagerSessionToken } from '../auth.js?v=20260813-7';
-import { requestAction } from '../api.js?v=20260813-7';
-import { createManagerNav } from '../navigation.js?v=20260813-7';
-import { createManagerMessagePanel } from './manager-dashboard.js?v=20260813-7';
+import { getManagerSessionToken } from '../auth.js?v=20260814-1';
+import { requestAction } from '../api.js?v=20260814-1';
+import { createManagerNav } from '../navigation.js?v=20260814-1';
+import { createManagerMessagePanel } from './manager-dashboard.js?v=20260814-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
