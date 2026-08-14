@@ -1,5 +1,5 @@
-import { loginPlayer } from '../player-auth.js?v=20260814-1';
-import { navigateTo } from '../router.js?v=20260814-1';
+import { loginPlayer } from '../player-auth.js?v=20260814-2';
+import { navigateTo } from '../router.js?v=20260814-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

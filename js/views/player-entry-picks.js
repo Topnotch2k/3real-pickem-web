@@ -1,7 +1,7 @@
-import { getPlayerSessionToken } from '../player-auth.js?v=20260814-1';
-import { requestAction } from '../api.js?v=20260814-1';
-import { navigateTo } from '../router.js?v=20260814-1';
-import { createPlayerNav } from '../navigation.js?v=20260814-1';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260814-2';
+import { requestAction } from '../api.js?v=20260814-2';
+import { navigateTo } from '../router.js?v=20260814-2';
+import { createPlayerNav } from '../navigation.js?v=20260814-2';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -178,7 +178,6 @@ export function createPlayerEntryPicksView() {
     badge.style.setProperty('--team-primary', colors.primary);
     badge.style.setProperty('--team-contrast', colors.contrast);
     badge.appendChild(createElement('span', { className: 'team-helmet-code', text: code || '?' }));
-    badge.appendChild(createElement('span', { className: 'team-helmet-mask' }));
     return badge;
   }
 

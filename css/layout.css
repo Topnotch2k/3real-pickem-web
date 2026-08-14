@@ -891,15 +891,15 @@ h1 {
 .team-helmet-badge {
   position: relative;
   display: inline-flex;
-  flex: 0 0 46px;
-  width: 46px;
-  height: 34px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 32px;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(248, 247, 239, 0.78);
-  border-radius: 22px 20px 12px 18px;
+  border: 2px solid rgba(248, 247, 239, 0.62);
+  border-radius: 20px 18px 10px 16px;
   background: var(--team-primary, #1f241f);
-  box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.18);
   color: var(--team-contrast, #fff);
   line-height: 1;
 }
@@ -907,36 +907,24 @@ h1 {
 .team-helmet-badge::after {
   content: "";
   position: absolute;
-  right: -6px;
-  bottom: 3px;
+  right: 4px;
+  bottom: 5px;
   width: 14px;
-  height: 10px;
-  border: 2px solid rgba(248, 247, 239, 0.78);
-  border-left: 0;
-  border-radius: 0 8px 8px 0;
-  background: transparent;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.55;
 }
 
 .team-helmet-code {
   position: relative;
   z-index: 1;
-  max-width: 36px;
+  max-width: 32px;
   overflow: hidden;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 900;
   letter-spacing: 0;
   text-align: center;
-}
-
-.team-helmet-mask {
-  position: absolute;
-  right: 3px;
-  bottom: 5px;
-  width: 15px;
-  height: 8px;
-  border-top: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  opacity: 0.75;
 }
 
 .pick-team-name {
