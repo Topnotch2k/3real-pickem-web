@@ -1,7 +1,7 @@
-import { getPlayerSessionToken } from '../player-auth.js?v=20260814-2';
-import { requestAction } from '../api.js?v=20260814-2';
-import { navigateTo } from '../router.js?v=20260814-2';
-import { createPlayerNav } from '../navigation.js?v=20260814-2';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260814-3';
+import { requestAction } from '../api.js?v=20260814-3';
+import { navigateTo } from '../router.js?v=20260814-3';
+import { createPlayerNav } from '../navigation.js?v=20260814-3';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -37,42 +37,56 @@ function formatDateTime(value) {
 
 const RECONCILED_CONFLICT_CODES = new Set(['PICK_LOCKED']);
 
-const TEAM_HELMET_COLORS = {
-  ARI: { primary: '#97233F', contrast: '#FFFFFF' },
-  ATL: { primary: '#A71930', contrast: '#FFFFFF' },
-  BAL: { primary: '#241773', contrast: '#FFFFFF' },
-  BUF: { primary: '#00338D', contrast: '#FFFFFF' },
-  CAR: { primary: '#0085CA', contrast: '#000000' },
-  CHI: { primary: '#0B162A', contrast: '#FFFFFF' },
-  CIN: { primary: '#FB4F14', contrast: '#000000' },
-  CLE: { primary: '#311D00', contrast: '#FFFFFF' },
-  DAL: { primary: '#041E42', contrast: '#FFFFFF' },
-  DEN: { primary: '#FB4F14', contrast: '#000000' },
-  DET: { primary: '#0076B6', contrast: '#FFFFFF' },
-  GB: { primary: '#203731', contrast: '#FFFFFF' },
-  HOU: { primary: '#03202F', contrast: '#FFFFFF' },
-  IND: { primary: '#002C5F', contrast: '#FFFFFF' },
-  JAX: { primary: '#006778', contrast: '#FFFFFF' },
-  KC: { primary: '#E31837', contrast: '#FFFFFF' },
-  LV: { primary: '#000000', contrast: '#FFFFFF' },
-  LAC: { primary: '#0080C6', contrast: '#FFFFFF' },
-  LAR: { primary: '#003594', contrast: '#FFFFFF' },
-  MIA: { primary: '#008E97', contrast: '#000000' },
-  MIN: { primary: '#4F2683', contrast: '#FFFFFF' },
-  NE: { primary: '#002244', contrast: '#FFFFFF' },
-  NO: { primary: '#D3BC8D', contrast: '#000000' },
-  NYG: { primary: '#0B2265', contrast: '#FFFFFF' },
-  NYJ: { primary: '#125740', contrast: '#FFFFFF' },
-  PHI: { primary: '#004C54', contrast: '#FFFFFF' },
-  PIT: { primary: '#FFB612', contrast: '#000000' },
-  SF: { primary: '#AA0000', contrast: '#FFFFFF' },
-  SEA: { primary: '#002244', contrast: '#FFFFFF' },
-  TB: { primary: '#D50A0A', contrast: '#FFFFFF' },
-  TEN: { primary: '#0C2340', contrast: '#FFFFFF' },
-  WAS: { primary: '#5A1414', contrast: '#FFFFFF' },
+const TEAM_COLORS = {
+  ARI: { name: 'Cardinals', primary: '#97233F', contrast: '#FFFFFF' },
+  ATL: { name: 'Falcons', primary: '#A71930', contrast: '#FFFFFF' },
+  BAL: { name: 'Ravens', primary: '#241773', contrast: '#FFFFFF' },
+  BUF: { name: 'Bills', primary: '#00338D', contrast: '#FFFFFF' },
+  CAR: { name: 'Panthers', primary: '#0085CA', contrast: '#000000' },
+  CHI: { name: 'Bears', primary: '#0B162A', contrast: '#FFFFFF' },
+  CIN: { name: 'Bengals', primary: '#FB4F14', contrast: '#000000' },
+  CLE: { name: 'Browns', primary: '#311D00', contrast: '#FFFFFF' },
+  DAL: { name: 'Cowboys', primary: '#041E42', contrast: '#FFFFFF' },
+  DEN: { name: 'Broncos', primary: '#FB4F14', contrast: '#000000' },
+  DET: { name: 'Lions', primary: '#0076B6', contrast: '#FFFFFF' },
+  GB: { name: 'Packers', primary: '#203731', contrast: '#FFFFFF' },
+  HOU: { name: 'Texans', primary: '#03202F', contrast: '#FFFFFF' },
+  IND: { name: 'Colts', primary: '#002C5F', contrast: '#FFFFFF' },
+  JAX: { name: 'Jaguars', primary: '#006778', contrast: '#FFFFFF' },
+  KC: { name: 'Chiefs', primary: '#E31837', contrast: '#FFFFFF' },
+  LV: { name: 'Raiders', primary: '#000000', contrast: '#FFFFFF' },
+  LAC: { name: 'Chargers', primary: '#0080C6', contrast: '#FFFFFF' },
+  LAR: { name: 'Rams', primary: '#003594', contrast: '#FFFFFF' },
+  MIA: { name: 'Dolphins', primary: '#008E97', contrast: '#000000' },
+  MIN: { name: 'Vikings', primary: '#4F2683', contrast: '#FFFFFF' },
+  NE: { name: 'Patriots', primary: '#002244', contrast: '#FFFFFF' },
+  NO: { name: 'Saints', primary: '#D3BC8D', contrast: '#000000' },
+  NYG: { name: 'Giants', primary: '#0B2265', contrast: '#FFFFFF' },
+  NYJ: { name: 'Jets', primary: '#125740', contrast: '#FFFFFF' },
+  PHI: { name: 'Eagles', primary: '#004C54', contrast: '#FFFFFF' },
+  PIT: { name: 'Steelers', primary: '#FFB612', contrast: '#000000' },
+  SF: { name: '49ers', primary: '#AA0000', contrast: '#FFFFFF' },
+  SEA: { name: 'Seahawks', primary: '#002244', contrast: '#FFFFFF' },
+  TB: { name: 'Buccaneers', primary: '#D50A0A', contrast: '#FFFFFF' },
+  TEN: { name: 'Titans', primary: '#0C2340', contrast: '#FFFFFF' },
+  WAS: { name: 'Commanders', primary: '#5A1414', contrast: '#FFFFFF' },
 };
 
-const FALLBACK_HELMET_COLORS = { primary: '#1f241f', contrast: '#FFFFFF' };
+const FALLBACK_TEAM_COLORS = { name: '', primary: '#1f241f', contrast: '#FFFFFF' };
+
+function teamInfo(team) {
+  const code = String(team || '').trim().toUpperCase();
+  const info = TEAM_COLORS[code] || FALLBACK_TEAM_COLORS;
+  return { ...info, code, name: info.name || code || 'Team' };
+}
+
+function teamName(team) {
+  return teamInfo(team).name;
+}
+
+function matchupLabel(awayTeam, homeTeam) {
+  return `${teamName(awayTeam)} at ${teamName(homeTeam)}`;
+}
 
 export function createPlayerEntryPicksView() {
   const entryId = entryIdFromHash();
@@ -168,22 +182,20 @@ export function createPlayerEntryPicksView() {
     return savedPick === game.winnerTeam ? 'Correct' : 'Incorrect';
   }
 
-  function createTeamHelmetBadge(team) {
-    const code = String(team || '').trim().toUpperCase();
-    const colors = TEAM_HELMET_COLORS[code] || FALLBACK_HELMET_COLORS;
-    const badge = createElement('span', {
-      className: 'team-helmet-badge',
+  function createTeamColorChip(team) {
+    const colors = teamInfo(team);
+    const chip = createElement('span', {
+      className: 'team-color-chip',
       attributes: { 'aria-hidden': 'true' },
     });
-    badge.style.setProperty('--team-primary', colors.primary);
-    badge.style.setProperty('--team-contrast', colors.contrast);
-    badge.appendChild(createElement('span', { className: 'team-helmet-code', text: code || '?' }));
-    return badge;
+    chip.style.setProperty('--team-primary', colors.primary);
+    chip.style.setProperty('--team-contrast', colors.contrast);
+    return chip;
   }
 
   function createPickControls(game, selected) {
     const fieldset = createElement('fieldset', { className: 'pick-team-fieldset' });
-    const legend = createElement('legend', { text: `${game.awayTeam} at ${game.homeTeam}` });
+    const legend = createElement('legend', { text: matchupLabel(game.awayTeam, game.homeTeam) });
     fieldset.appendChild(legend);
     const choices = createElement('div', { className: 'pick-team-options' });
     [game.awayTeam, game.homeTeam].forEach((team) => {
@@ -205,8 +217,8 @@ export function createPlayerEntryPicksView() {
       const label = createElement('label', { className: 'pick-team-choice', attributes: { for: controlId } });
       appendChildren(label, [
         input,
-        createTeamHelmetBadge(team),
-        createElement('span', { className: 'pick-team-name', text: team }),
+        createTeamColorChip(team),
+        createElement('span', { className: 'pick-team-name', text: teamName(team) }),
       ]);
       choices.appendChild(label);
     });
@@ -278,7 +290,7 @@ export function createPlayerEntryPicksView() {
     ]);
     appendChildren(card, [
       createElement('p', { className: 'eyebrow', text: 'Tiebreaker' }),
-      createElement('h3', { className: 'tiebreaker-matchup', text: `${game.awayTeam} at ${game.homeTeam}` }),
+      createElement('h3', { className: 'tiebreaker-matchup', text: matchupLabel(game.awayTeam, game.homeTeam) }),
       gameStatusPill(game),
       appendChildren(createElement('div', { className: 'pick-game-meta' }), gameMetaLines(game, selected)),
       createPickControls(game, selected),

@@ -1,7 +1,7 @@
-import { requestAction } from '../api.js?v=20260814-2';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260814-2';
-import { createPlayerNav } from '../navigation.js?v=20260814-2';
-import { createInviteFriendsCard } from './player-dashboard.js?v=20260814-2';
+import { requestAction } from '../api.js?v=20260814-3';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260814-3';
+import { createPlayerNav } from '../navigation.js?v=20260814-3';
+import { createInviteFriendsCard } from './player-dashboard.js?v=20260814-3';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

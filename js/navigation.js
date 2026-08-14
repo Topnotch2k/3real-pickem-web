@@ -1,4 +1,4 @@
-import { getCurrentRoute, navigateTo } from './router.js?v=20260814-2';
+import { getCurrentRoute, navigateTo } from './router.js?v=20260814-3';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
