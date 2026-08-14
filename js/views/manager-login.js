@@ -1,5 +1,5 @@
-import { loginManager } from '../auth.js?v=20260813-5';
-import { navigateTo } from '../router.js?v=20260813-5';
+import { loginManager } from '../auth.js?v=20260813-6';
+import { navigateTo } from '../router.js?v=20260813-6';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

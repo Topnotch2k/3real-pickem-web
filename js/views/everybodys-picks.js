@@ -1,8 +1,8 @@
-import { getManagerSessionToken } from '../auth.js?v=20260813-5';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260813-5';
-import { requestAction } from '../api.js?v=20260813-5';
-import { navigateTo } from '../router.js?v=20260813-5';
-import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260813-5';
+import { getManagerSessionToken } from '../auth.js?v=20260813-6';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260813-6';
+import { requestAction } from '../api.js?v=20260813-6';
+import { navigateTo } from '../router.js?v=20260813-6';
+import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260813-6';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -376,6 +376,10 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     text: 'Loading Everybody\'s Picks...',
     attributes: { role: 'status', 'aria-live': 'polite' },
   });
+  const scoreRefreshNote = createElement('p', {
+    className: 'muted',
+    text: 'Scores are refreshed at scheduled checkpoints on game days and may not update immediately after every play or game.',
+  });
   const leadersRegion = createElement('section');
   const leaderboardRegion = createElement('section');
   const boardRegion = createElement('section');
@@ -453,6 +457,7 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     createElement('h1', { text: 'Everybody\'s Picks' }),
     controls,
     message,
+    ...(actor === 'player' ? [scoreRefreshNote] : []),
   ]);
   appendChildren(wrapper, [
     actor === 'manager' ? createManagerNav('manager-everybodys-picks') : createPlayerNav('player-everybodys-picks'),

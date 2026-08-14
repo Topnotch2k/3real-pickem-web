@@ -1,7 +1,7 @@
-import { requestAction } from '../api.js?v=20260813-5';
-import { getManagerSessionToken } from '../auth.js?v=20260813-5';
-import { navigateTo } from '../router.js?v=20260813-5';
-import { createManagerNav } from '../navigation.js?v=20260813-5';
+import { requestAction } from '../api.js?v=20260813-6';
+import { getManagerSessionToken } from '../auth.js?v=20260813-6';
+import { navigateTo } from '../router.js?v=20260813-6';
+import { createManagerNav } from '../navigation.js?v=20260813-6';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -35,6 +35,22 @@ function formatDateTime(value, fallback = 'Not configured') {
     timeStyle: 'short',
     timeZone: 'America/Chicago',
   }).format(date);
+}
+
+function formatScoreRefreshTime(value) {
+  if (!value) return 'Not yet';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not yet';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Chicago',
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value || '';
+  return `${part('month')} ${part('day')}, ${part('year')} · ${part('hour')}:${part('minute')} ${part('dayPeriod')} CT`;
 }
 
 function formatWeekday(value, fallback = 'Not available') {
@@ -201,6 +217,10 @@ export function createManagerWeekView() {
       refreshScoresButton.addEventListener('click', () => refreshScores());
       actions.appendChild(refreshScoresButton);
     }
+    const scoreRefreshStatus = createElement('p', {
+      className: 'muted',
+      text: `Last refreshed: ${formatScoreRefreshTime(weekData.scoreLastRefreshedAt)}`,
+    });
     const allGamesFinal = displayedGamesAreFinal(weekData.games || []);
     if (week.status === 'open') {
       const gradeButton = createElement('button', {
@@ -291,6 +311,7 @@ export function createManagerWeekView() {
       weekHeader,
       details,
       actions,
+      scoreRefreshStatus,
       ...(week.status === 'open' && !allGamesFinal ? [createElement('p', { className: 'muted', text: 'All Games must be final before grading.' })] : []),
       games,
       ...(standings ? [standings] : []),
