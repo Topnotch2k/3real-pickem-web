@@ -1,8 +1,8 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260814-4';
-import { requestAction } from '../api.js?v=20260814-4';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260814-4';
-import { navigateTo } from '../router.js?v=20260814-4';
-import { createPlayerNav } from '../navigation.js?v=20260814-4';
+import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260814-5';
+import { requestAction } from '../api.js?v=20260814-5';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260814-5';
+import { navigateTo } from '../router.js?v=20260814-5';
+import { createPlayerNav } from '../navigation.js?v=20260814-5';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -1425,10 +1425,10 @@ export function createDashboardMoraleCard(bootstrapRequest) {
     }
     card.hidden = false;
     if (false) {
-      body.appendChild(createElement('p', { className: 'status-pill status-pill-muted', text: `👥 ${playerCountLabel(registeredPlayerCount)}` }));
+      body.appendChild(createElement('p', { className: 'status-pill status-pill-muted', text: `\u{1F465} ${playerCountLabel(registeredPlayerCount)}` }));
     }
     if (showPreseason) {
-      body.appendChild(createElement('p', { className: 'eyebrow', text: 'PRESEASON IS FREE 🏈' }));
+      body.appendChild(createElement('p', { className: 'eyebrow', text: 'PRESEASON IS FREE \u{1F3C8}' }));
       body.appendChild(createElement('p', { className: 'muted', text: 'Preseason is free to play. Real-money prize pots begin with the regular season.' }));
     }
   }

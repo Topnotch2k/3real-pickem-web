@@ -1,4 +1,4 @@
-import { createPlayerNav } from '../navigation.js?v=20260814-4';
+import { createPlayerNav } from '../navigation.js?v=20260814-5';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -49,10 +49,10 @@ export function createPlayerHelpView() {
   ].forEach(([title, body]) => list.appendChild(helpSection(title, body)));
   list.appendChild(multiParagraphHelpSection('TIEBREAKER', [
     'If two or more entries finish with the same number of correct picks, the tiebreaker is used.',
-    'The tiebreaker game is the game with the latest kickoff time for that Week. Before it locks, you enter your prediction for that game’s combined final score.',
+    'The tiebreaker game is the game with the latest kickoff time for that Week. Before it locks, you enter your prediction for that game\'s combined final score.',
     'If tied entries picked different winners for the tiebreaker game, entries that picked the tiebreaker game winner correctly rank ahead of entries that did not.',
     'If the tied entries are still tied, the entry whose predicted combined score is closest to the actual combined score ranks higher.',
-    'Example: If you predict 47 total points and the final score is 27–23, the actual combined score is 50, so your Points Away is 3.',
+    'Example: If you predict 47 total points and the final score is 27-23, the actual combined score is 50, so your Points Away is 3.',
     'If entries are still tied after that, they share the same place.',
   ]));
   const responsibility = createElement('article', { className: 'player-card compact-card' });
