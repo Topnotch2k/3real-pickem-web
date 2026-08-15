@@ -1,8 +1,8 @@
-import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260814-5';
-import { requestAction } from '../api.js?v=20260814-5';
-import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260814-5';
-import { navigateTo } from '../router.js?v=20260814-5';
-import { createManagerNav } from '../navigation.js?v=20260814-5';
+import { getManagerSessionToken, logoutManager } from '../auth.js?v=20260814-6';
+import { requestAction } from '../api.js?v=20260814-6';
+import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260814-6';
+import { navigateTo } from '../router.js?v=20260814-6';
+import { createManagerNav } from '../navigation.js?v=20260814-6';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -614,6 +614,11 @@ export function createManagerDashboardView(context = {}) {
     className: 'status-pill',
     text: 'Pending Payments: 0',
   });
+  const onlinePlayers = createElement('p', {
+    className: 'status-pill',
+    text: '\u{1F7E2} 0 online',
+    attributes: { 'aria-label': 'Online players' },
+  });
   const messagesPill = createElement('button', {
     className: 'secondary-button',
     text: 'Messages',
@@ -683,6 +688,29 @@ export function createManagerDashboardView(context = {}) {
     }
   }
 
+  async function loadOnlinePlayers() {
+    try {
+      const result = await managerAction('manager.presence.summary');
+      if (!wrapper.isConnected) {
+        return;
+      }
+      const count = Number(result.data.onlinePlayerCount || 0);
+      onlinePlayers.textContent = `\u{1F7E2} ${Number.isSafeInteger(count) && count > 0 ? count : 0} online`;
+    } catch {
+      onlinePlayers.textContent = '\u{1F7E2} 0 online';
+    }
+  }
+
+  async function pollOnlinePlayers() {
+    if (!wrapper.isConnected) {
+      return;
+    }
+    await loadOnlinePlayers();
+    if (wrapper.isConnected) {
+      window.setTimeout(pollOnlinePlayers, 60000);
+    }
+  }
+
   function updateMessageCount(count) {
     messagesPill.textContent = count > 0 ? `Messages (${count} unread)` : 'Messages';
   }
@@ -703,6 +731,7 @@ export function createManagerDashboardView(context = {}) {
     createElement('h1', { text: 'Manager Dashboard' }),
     createElement('p', { text: `Signed in as ${manager.username || 'owner'}.` }),
     createElement('p', { className: 'status-pill', text: `Role: ${manager.role || 'owner'}` }),
+    onlinePlayers,
     pendingPayments,
     pendingPaymentsStatus,
     createElement('p', { className: 'muted', text: 'Use the navigation for players, messages, payments, week controls, referrals, and league pick boards.' }),
@@ -712,6 +741,7 @@ export function createManagerDashboardView(context = {}) {
   wrapper.appendChild(card);
   wrapper.appendChild(createInviteCard());
   window.setTimeout(pollPendingPayments, 0);
+  window.setTimeout(pollOnlinePlayers, 0);
   window.setTimeout(loadMessageCount, 0);
   return wrapper;
 }

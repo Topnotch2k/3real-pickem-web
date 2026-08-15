@@ -1,4 +1,4 @@
-import { createPlayerNav } from '../navigation.js?v=20260814-5';
+import { createPlayerNav } from '../navigation.js?v=20260814-6';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

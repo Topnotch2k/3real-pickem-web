@@ -1,5 +1,6 @@
-import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260814-5';
-import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260814-5';
+import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260814-6';
+import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260814-6';
+import { startPlayerPresenceHeartbeat, stopPlayerPresenceHeartbeat } from './player-presence.js?v=20260814-6';
 
 const routes = new Map();
 
@@ -71,16 +72,21 @@ export function startRouter(root) {
       try {
         const session = await validateStoredPlayerSession();
         if (!session) {
+          stopPlayerPresenceHeartbeat();
           clearPlayerSessionToken();
           navigateTo('player-login');
           return;
         }
+        startPlayerPresenceHeartbeat();
         context = { ...context, player: session.player, session };
       } catch (error) {
+        stopPlayerPresenceHeartbeat();
         clearPlayerSessionToken();
         navigateTo('player-login');
         return;
       }
+    } else {
+      stopPlayerPresenceHeartbeat();
     }
 
     if (currentVersion !== renderVersion) {
