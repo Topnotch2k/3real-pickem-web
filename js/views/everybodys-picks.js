@@ -1,8 +1,8 @@
-import { getManagerSessionToken } from '../auth.js?v=20260815-1';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260815-1';
-import { requestAction } from '../api.js?v=20260815-1';
-import { navigateTo } from '../router.js?v=20260815-1';
-import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260815-1';
+import { getManagerSessionToken } from '../auth.js?v=20260816-1';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260816-1';
+import { requestAction } from '../api.js?v=20260816-1';
+import { navigateTo } from '../router.js?v=20260816-1';
+import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260816-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -147,7 +147,7 @@ function renderBoard(data) {
   headerRow.appendChild(createElement('th', { className: 'picks-board-sticky', text: 'Player / Entry', attributes: { scope: 'col' } }));
   (data.matchups || []).forEach((game) => headerRow.appendChild(renderHeaderCell(game)));
   headerRow.appendChild(renderHeaderCell(data.tiebreakerGame || {}, 'Tiebreaker Pick'));
-  ['Predicted Total', 'Correct Picks', 'Points Away'].forEach((label) => {
+  ['Predicted Total', 'Points Away', 'Correct Picks'].forEach((label) => {
     headerRow.appendChild(createElement('th', { text: label, attributes: { scope: 'col' } }));
   });
   thead.appendChild(headerRow);
@@ -164,8 +164,8 @@ function renderBoard(data) {
       ? 'LOCKED'
       : displayValue(row.tiebreaker && row.tiebreaker.predictedTotal);
     tr.appendChild(createElement('td', { text: predicted }));
-    tr.appendChild(createElement('td', { text: displayValue(row.correctPicks) }));
     tr.appendChild(createElement('td', { text: displayValue(row.pointsAway) }));
+    tr.appendChild(createElement('td', { text: displayValue(row.correctPicks) }));
     tbody.appendChild(tr);
   });
   appendChildren(table, [thead, tbody]);

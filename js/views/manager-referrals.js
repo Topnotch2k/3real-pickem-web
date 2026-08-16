@@ -1,5 +1,5 @@
-import { createManagerNav } from '../navigation.js?v=20260815-1';
-import { createReferralsCard } from './manager-dashboard.js?v=20260815-1';
+import { createManagerNav } from '../navigation.js?v=20260816-1';
+import { createReferralsCard } from './manager-dashboard.js?v=20260816-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

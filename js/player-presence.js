@@ -1,5 +1,5 @@
-import { requestAction } from './api.js?v=20260815-1';
-import { getPlayerSessionToken } from './player-auth.js?v=20260815-1';
+import { requestAction } from './api.js?v=20260816-1';
+import { getPlayerSessionToken } from './player-auth.js?v=20260816-1';
 
 const HEARTBEAT_INTERVAL_MS = 60000;
 

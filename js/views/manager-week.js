@@ -1,7 +1,7 @@
-import { requestAction } from '../api.js?v=20260815-1';
-import { getManagerSessionToken } from '../auth.js?v=20260815-1';
-import { navigateTo } from '../router.js?v=20260815-1';
-import { createManagerNav } from '../navigation.js?v=20260815-1';
+import { requestAction } from '../api.js?v=20260816-1';
+import { getManagerSessionToken } from '../auth.js?v=20260816-1';
+import { navigateTo } from '../router.js?v=20260816-1';
+import { createManagerNav } from '../navigation.js?v=20260816-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
