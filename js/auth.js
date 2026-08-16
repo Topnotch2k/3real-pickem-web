@@ -1,4 +1,4 @@
-import { requestAction } from './api.js?v=20260814-6';
+import { requestAction } from './api.js?v=20260815-1';
 
 const MANAGER_SESSION_KEY = '3real_pickem_manager_session_token';
 let postLoginManagerValidationHandoff = null;

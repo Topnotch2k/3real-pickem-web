@@ -1,8 +1,8 @@
-import { getManagerSessionToken } from '../auth.js?v=20260814-6';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260814-6';
-import { requestAction } from '../api.js?v=20260814-6';
-import { navigateTo } from '../router.js?v=20260814-6';
-import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260814-6';
+import { getManagerSessionToken } from '../auth.js?v=20260815-1';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260815-1';
+import { requestAction } from '../api.js?v=20260815-1';
+import { navigateTo } from '../router.js?v=20260815-1';
+import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260815-1';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -358,7 +358,7 @@ function renderWeeklyResultsBanner(data, config) {
   });
   appendChildren(button, [
     createElement('span', { className: 'weekly-results-banner-title', text: 'WEEKLY RESULTS ARE IN \u{1F3C6}' }),
-    createElement('span', { className: 'weekly-results-banner-copy', text: 'See Champion & Podium' }),
+    createElement('span', { className: 'weekly-results-banner-copy', text: 'CLICK HERE TO SEE CHAMPION & PODIUM \u2192' }),
   ]);
   button.addEventListener('click', () => {
     navigateTo(`${config.resultsRoute}?weekId=${encodeURIComponent(weekId)}`);

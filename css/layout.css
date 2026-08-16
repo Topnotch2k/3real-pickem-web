@@ -245,6 +245,8 @@ h1 {
   cursor: pointer;
   padding: var(--space-3);
   text-align: center;
+  box-shadow: 0 0 18px rgba(217, 173, 50, 0.12);
+  animation: weekly-results-banner-pulse 2.8s ease-in-out infinite;
 }
 
 .weekly-results-banner:hover,
@@ -263,9 +265,24 @@ h1 {
 }
 
 .weekly-results-banner-copy {
-  color: var(--color-muted);
+  color: var(--color-gold-soft);
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+@keyframes weekly-results-banner-pulse {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(217, 173, 50, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(217, 173, 50, 0.24);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekly-results-banner {
+    animation: none;
+  }
 }
 
 .weekly-results-shell {

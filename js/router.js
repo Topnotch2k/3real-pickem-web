@@ -1,6 +1,6 @@
-import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260814-6';
-import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260814-6';
-import { startPlayerPresenceHeartbeat, stopPlayerPresenceHeartbeat } from './player-presence.js?v=20260814-6';
+import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260815-1';
+import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260815-1';
+import { startPlayerPresenceHeartbeat, stopPlayerPresenceHeartbeat } from './player-presence.js?v=20260815-1';
 
 const routes = new Map();
 
