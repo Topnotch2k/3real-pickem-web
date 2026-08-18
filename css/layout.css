@@ -712,6 +712,15 @@ h1 {
   flex-wrap: wrap;
 }
 
+.player-dashboard-logo {
+  display: block;
+  width: clamp(4rem, 18vw, 6rem);
+  max-width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+}
+
 .player-dashboard-summary-actions {
   justify-content: flex-start;
 }

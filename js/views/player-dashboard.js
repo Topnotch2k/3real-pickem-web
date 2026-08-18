@@ -1476,6 +1476,16 @@ export function createPlayerDashboardView(context = {}) {
   const summaryIntro = createElement('div', { className: 'player-dashboard-summary-intro' });
   const identity = createElement('div', { className: 'player-dashboard-summary-identity' });
   const actions = createElement('div', { className: 'player-dashboard-summary-actions' });
+  const logo = createElement('img', {
+    className: 'player-dashboard-logo',
+    attributes: {
+      src: './assets/brand/3real-pickem-logo.png',
+      alt: '3 Real Pick’em',
+      width: '96',
+      height: '96',
+      decoding: 'async',
+    },
+  });
   const avatar = createElement('span', { className: 'player-avatar large-avatar', text: player.avatar || 'football' });
   const status = createElement('span', { className: 'status-pill', text: player.status || 'active' });
   const accent = createElement('span', { className: 'player-dashboard-accent', text: '\u{1F3C8}' });
@@ -1515,6 +1525,7 @@ export function createPlayerDashboardView(context = {}) {
 
   appendChildren(summaryIntro, [
     createElement('p', { className: 'eyebrow', text: 'Player Dashboard' }),
+    logo,
     avatar,
   ]);
   appendChildren(identity, [
