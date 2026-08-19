@@ -1468,6 +1468,153 @@ function loadRegisteredPlayerCount(bootstrapRequest, countPill) {
     });
 }
 
+function createDashboardAction(label, route, className = 'primary-button') {
+  const button = createElement('button', { className, text: label, attributes: { type: 'button' } });
+  button.addEventListener('click', () => navigateTo(route));
+  return button;
+}
+
+function firstIncompleteEntry(entries) {
+  return entries.find((entry) => !entry.complete) || null;
+}
+
+function currentWeekPayment(payments, weekId) {
+  return payments.find((payment) => (
+    String(payment.weekId || '') === String(weekId || '') &&
+    ['pending', 'approved'].includes(String(payment.status || '').trim().toLowerCase())
+  )) || null;
+}
+
+function renderNextStepContent(card, state) {
+  card.replaceChildren();
+  const children = [
+    createElement('p', { className: 'eyebrow', text: 'YOUR NEXT STEP' }),
+    createElement('h2', { text: state.heading }),
+    createElement('p', { className: 'muted', text: state.body }),
+  ];
+  if (state.buttonLabel && state.route) {
+    children.push(appendChildren(createElement('div', { className: 'button-row' }), [
+      createDashboardAction(state.buttonLabel, state.route, state.secondary ? 'secondary-button' : 'primary-button'),
+    ]));
+  }
+  appendChildren(card, children);
+}
+
+function nextStepState(entrySheetsData, paymentsData) {
+  const entrySheets = entrySheetsData || {};
+  const week = entrySheets.week || null;
+  const thisWeek = entrySheets.thisWeek || null;
+  const entries = entrySheets.entries || [];
+  const payments = paymentsData && paymentsData.payments || [];
+  const incompleteEntry = firstIncompleteEntry(entries);
+
+  if (!week) {
+    return {
+      heading: 'NO WEEK OPEN YET',
+      body: 'There is not an open week for picks right now. Check back when the manager opens the next week.',
+      buttonLabel: 'VIEW RESULTS',
+      route: 'player-weekly-results',
+    };
+  }
+
+  if (thisWeek && thisWeek.firstLockPassed === true && entries.length > 0) {
+    return {
+      heading: 'GAMES HAVE STARTED \u{1F3C8}',
+      body: 'Some picks may be locked. Open your entry sheets to review what is still available.',
+      buttonLabel: 'OPEN MY ENTRY SHEETS',
+      route: incompleteEntry ? `player-entry-picks?entryId=${encodeURIComponent(incompleteEntry.entryId)}` : 'player-picks',
+    };
+  }
+
+  if (incompleteEntry) {
+    return {
+      heading: 'YOUR NEXT STEP: MAKE YOUR PICKS \u{1F3C8}',
+      body: 'Your entry is ready. Pick every game before the deadline.',
+      buttonLabel: 'MAKE PICKS NOW',
+      route: `player-entry-picks?entryId=${encodeURIComponent(incompleteEntry.entryId)}`,
+    };
+  }
+
+  if (entries.length > 0 && entries.every((entry) => entry.complete === true)) {
+    return {
+      heading: 'PICKS SUBMITTED \u2705',
+      body: 'Your picks are in for your current entry sheets. You can review them any time.',
+      buttonLabel: 'VIEW ENTRY SHEETS',
+      route: 'player-picks',
+    };
+  }
+
+  if (currentWeekPayment(payments, week.weekId)) {
+    return {
+      heading: 'PAYMENT PENDING \u23F3',
+      body: 'Your payment request has been sent. You can make picks after your entry is approved and marked paid.',
+      buttonLabel: 'VIEW PAYMENTS',
+      route: 'player-payments',
+      secondary: true,
+    };
+  }
+
+  return {
+    heading: 'YOUR NEXT STEP: GET AN ENTRY \u{1F4B5}',
+    body: 'You need an entry before you can make picks.',
+    buttonLabel: 'GO TO PAYMENTS',
+    route: 'player-payments',
+  };
+}
+
+function createNextStepCard(bootstrapRequest) {
+  const card = createElement('section', { className: 'state-card compact-card' });
+  renderNextStepContent(card, {
+    heading: 'LOADING YOUR NEXT STEP',
+    body: 'Checking your current entry and payment status.',
+  });
+  Promise.all([
+    playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets'),
+    playerDashboardBootstrapSection(bootstrapRequest, 'payments').catch(() => ({ payments: [] })),
+  ])
+    .then(([entrySheets, payments]) => {
+      renderNextStepContent(card, nextStepState(entrySheets, payments));
+    })
+    .catch((error) => {
+      renderNextStepContent(card, {
+        heading: 'NEXT STEP UNAVAILABLE',
+        body: error.message || 'Your dashboard status could not be loaded. Try refreshing the page.',
+      });
+    });
+  return card;
+}
+
+function createHowToPlayCard() {
+  const card = createElement('section', { className: 'state-card compact-card' });
+  const list = createElement('ol', { className: 'player-list' });
+  [
+    ['GET AN ENTRY', 'Go to Payments and request/pay for your entry. Once it is approved and marked paid, your entry becomes available for picks.'],
+    ['MAKE YOUR PICKS', 'Go to Picks, choose a team for every game, and make sure your picks are in before the lock deadline.'],
+    ['CHECK RESULTS', 'Come back after the games to see results, wins, accuracy, standings, and your entry sheets.'],
+  ].forEach(([title, body]) => {
+    const item = createElement('li', { className: 'player-card compact-card' });
+    appendChildren(item, [
+      createElement('h3', { text: title }),
+      createElement('p', { className: 'muted', text: body }),
+    ]);
+    list.appendChild(item);
+  });
+  const saveHelp = createElement('section', { className: 'payment-instructions' });
+  appendChildren(saveHelp, [
+    createElement('p', { className: 'eyebrow', text: 'SAVE 3 REAL TO YOUR PHONE' }),
+    createElement('h3', { text: 'SAVE 3 REAL TO YOUR PHONE \u{1F4F1}' }),
+    createElement('p', { className: 'muted', text: 'iPhone / Safari: tap Share \u2192 Add to Home Screen' }),
+    createElement('p', { className: 'muted', text: 'Android / Chrome: tap Install app or Add to Home Screen' }),
+  ]);
+  appendChildren(card, [
+    createElement('p', { className: 'eyebrow', text: 'HOW TO PLAY' }),
+    createElement('h2', { text: 'HOW TO PLAY \u{1F3C8}' }),
+    list,
+    saveHelp,
+  ]);
+  return card;
+}
+
 export function createPlayerDashboardView(context = {}) {
   const player = context.player || {};
   const wrapper = createElement('main', { className: 'page-container' });
@@ -1494,8 +1641,9 @@ export function createPlayerDashboardView(context = {}) {
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
   const moraleCard = createDashboardMoraleCard(bootstrapRequest);
+  const nextStepCard = createNextStepCard(bootstrapRequest);
+  const howToPlayCard = createHowToPlayCard();
   const thisWeekHelper = createThisWeekHelper(bootstrapRequest);
-  const overview = createElement('section', { className: 'state-card compact-card' });
 
   function updateMessageBell(unreadCount) {
     const count = Number(unreadCount || 0);
@@ -1535,20 +1683,16 @@ export function createPlayerDashboardView(context = {}) {
   appendChildren(actions, [accent, messageBell, registeredPlayers, logout]);
   loadRegisteredPlayerCount(bootstrapRequest, registeredPlayers);
   appendChildren(summary, [summaryIntro, identity, actions]);
-  appendChildren(overview, [
-    createElement('p', { className: 'eyebrow', text: 'Quick Links' }),
-    createElement('h2', { text: 'Ready for this Week' }),
-    createElement('p', { className: 'muted', text: 'Use the tabs above for picks, messages, payments, referrals, league picks, results, and rules.' }),
-  ]);
   appendChildren(card, [
     summary,
   ]);
   appendChildren(wrapper, [
     createPlayerNav('player-dashboard'),
     card,
+    nextStepCard,
+    howToPlayCard,
     moraleCard,
     thisWeekHelper,
-    overview,
   ]);
   loadMessageBellCount();
   return wrapper;
