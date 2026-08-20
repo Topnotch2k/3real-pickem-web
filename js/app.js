@@ -20,6 +20,81 @@ import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=2026
 import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260816-1';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260816-1';
 
+const APP_DEPLOYMENT_VERSION = '20260819-1';
+const UPDATE_TARGET_STORAGE_KEY = '3real-pickem-update-target';
+const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+let updateCheckPromise = null;
+
+function readUpdateTarget() {
+  try {
+    return window.sessionStorage.getItem(UPDATE_TARGET_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function writeUpdateTarget(version) {
+  try {
+    window.sessionStorage.setItem(UPDATE_TARGET_STORAGE_KEY, version);
+  } catch {
+    // Storage failure should not block normal app use.
+  }
+}
+
+function clearUpdateTarget() {
+  try {
+    window.sessionStorage.removeItem(UPDATE_TARGET_STORAGE_KEY);
+  } catch {
+    // Storage failure should not block normal app use.
+  }
+}
+
+async function checkForFrontendUpdate() {
+  if (updateCheckPromise) {
+    return updateCheckPromise;
+  }
+  updateCheckPromise = (async () => {
+    try {
+      const response = await fetch(`./version.json?ts=${Date.now()}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      const deployedVersion = typeof data.version === 'string' ? data.version.trim() : '';
+      if (!deployedVersion) return;
+      if (deployedVersion === APP_DEPLOYMENT_VERSION) {
+        clearUpdateTarget();
+        return;
+      }
+      if (readUpdateTarget() === deployedVersion) {
+        return;
+      }
+      writeUpdateTarget(deployedVersion);
+      window.location.reload();
+    } catch {
+      // Update checks are best-effort and must never interrupt gameplay.
+    } finally {
+      updateCheckPromise = null;
+    }
+  })();
+  return updateCheckPromise;
+}
+
+function startFrontendUpdateChecks() {
+  checkForFrontendUpdate();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkForFrontendUpdate();
+    }
+  });
+  window.addEventListener('pageshow', () => {
+    checkForFrontendUpdate();
+  });
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      checkForFrontendUpdate();
+    }
+  }, UPDATE_CHECK_INTERVAL_MS);
+}
+
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
   if (options.className) {
@@ -162,4 +237,4 @@ registerRoute('player-everybodys-picks', () => createEverybodysPicksView({ actor
 registerRoute('player-weekly-results', createWeeklyResultsView, { requiresPlayerSession: true });
 registerRoute('player-help', createPlayerHelpView, { requiresPlayerSession: true });
 startRouter(root);
-
+startFrontendUpdateChecks();
