@@ -460,6 +460,16 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
   ]);
   appendChildren(header, [
     createElement('p', { className: 'eyebrow', text: 'Picks' }),
+    createElement('img', {
+      className: 'everybodys-picks-logo',
+      attributes: {
+        src: './assets/brand/3real-pickem-logo.png',
+        alt: '3 Real Pick’em',
+        width: '140',
+        height: '140',
+        decoding: 'async',
+      },
+    }),
     createElement('h1', { text: 'Everybody\'s Picks' }),
     controls,
     message,

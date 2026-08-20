@@ -201,6 +201,15 @@ h1 {
   align-items: end;
 }
 
+.everybodys-picks-logo {
+  display: block;
+  width: clamp(5.5rem, 28vw, 8.75rem);
+  max-width: 100%;
+  aspect-ratio: 1;
+  justify-self: center;
+  object-fit: contain;
+}
+
 .picks-board-pot {
   display: grid;
   gap: var(--space-1);
