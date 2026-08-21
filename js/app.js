@@ -20,7 +20,7 @@ import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=2026
 import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260819-2';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260816-1';
 
-const APP_DEPLOYMENT_VERSION = '20260821-1';
+const APP_DEPLOYMENT_VERSION = '20260821-2';
 const UPDATE_TARGET_STORAGE_KEY = '3real-pickem-update-target';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 let updateCheckPromise = null;
