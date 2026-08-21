@@ -315,12 +315,32 @@ h1 {
   border: 1px solid rgba(217, 173, 50, 0.55);
   border-radius: var(--radius-lg);
   background: rgba(7, 9, 7, 0.86);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   padding: var(--space-4);
 }
 
 .weekly-results-champion {
-  border-color: var(--color-gold);
+  border: 2px solid var(--color-gold);
+  background:
+    radial-gradient(circle at top, rgba(242, 211, 107, 0.18), transparent 55%),
+    linear-gradient(180deg, rgba(34, 29, 10, 0.94), rgba(7, 9, 7, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(242, 211, 107, 0.18),
+    0 22px 46px rgba(0, 0, 0, 0.34),
+    0 0 32px rgba(217, 173, 50, 0.16);
   text-align: center;
+}
+
+.weekly-results-place-2 {
+  border-color: rgba(217, 224, 232, 0.72);
+  background:
+    linear-gradient(180deg, rgba(217, 224, 232, 0.08), rgba(7, 9, 7, 0.88));
+}
+
+.weekly-results-place-3 {
+  border-color: rgba(197, 129, 73, 0.74);
+  background:
+    linear-gradient(180deg, rgba(197, 129, 73, 0.1), rgba(7, 9, 7, 0.88));
 }
 
 .weekly-results-card-header {
@@ -336,8 +356,9 @@ h1 {
 }
 
 .weekly-results-trophy {
-  font-size: clamp(2rem, 7vw, 3.25rem);
+  font-size: clamp(2.65rem, 9vw, 4.1rem);
   line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(242, 211, 107, 0.32));
 }
 
 .weekly-results-player {
@@ -350,6 +371,12 @@ h1 {
 .weekly-results-player h3 {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.weekly-results-champion .weekly-results-player h3 {
+  color: var(--color-gold-soft);
+  font-size: clamp(1.45rem, 6vw, 2.35rem);
+  line-height: 1.05;
 }
 
 .weekly-results-score {
@@ -372,6 +399,9 @@ h1 {
 }
 
 .weekly-results-prize {
+  border-color: rgba(242, 211, 107, 0.64);
+  background:
+    linear-gradient(180deg, rgba(217, 173, 50, 0.12), rgba(7, 9, 7, 0.86));
   justify-items: center;
   text-align: center;
 }

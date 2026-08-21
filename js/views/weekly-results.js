@@ -85,7 +85,10 @@ function renderBadges(codes) {
 }
 
 function renderResultCard(place, rows, champion = false) {
-  const card = createElement('article', { className: champion ? 'weekly-results-card weekly-results-champion' : 'weekly-results-card' });
+  const placementClass = place === 2 || place === 3 ? ` weekly-results-place-${place}` : '';
+  const card = createElement('article', {
+    className: champion ? 'weekly-results-card weekly-results-champion' : `weekly-results-card${placementClass}`,
+  });
   const title = place === 1 && rows.length > 1 ? 'WEEK CHAMPIONS' : placeTitle(place);
   const header = createElement('div', { className: 'weekly-results-card-header' });
   appendChildren(header, [
