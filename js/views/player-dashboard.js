@@ -163,6 +163,7 @@ function paymentMethodLabel(method) {
     cash_app: 'Cash App',
     apple_pay: 'Apple Pay',
     zelle: 'Zelle',
+    chime: 'Chime',
   }[method] || String(method || 'Unknown');
 }
 
@@ -924,7 +925,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
     createElement('h2', { text: 'Payment Request' }),
     createElement('p', {
       className: 'muted',
-      text: 'Choose how you will pay the manager. Cash, Cash App, Apple Pay, and Zelle are verified outside the app. Your entries are created only after the manager marks the approved payment paid.',
+      text: 'Choose how you will pay the manager. Cash, Cash App, Apple Pay, Zelle, and Chime are verified outside the app. Your entries are created only after the manager marks the approved payment paid.',
     }),
     form,
     instructionRegion,

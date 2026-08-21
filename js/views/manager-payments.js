@@ -77,6 +77,8 @@ function paymentMethodLabel(method) {
     cash: 'Cash',
     cash_app: 'Cash App',
     apple_pay: 'Apple Pay',
+    zelle: 'Zelle',
+    chime: 'Chime',
   }[method] || String(method || 'Unknown');
 }
 
