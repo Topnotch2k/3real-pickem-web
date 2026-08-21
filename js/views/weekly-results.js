@@ -16,6 +16,12 @@ function appendChildren(parent, children) {
   return parent;
 }
 
+function createField(labelText, control) {
+  const label = createElement('label', { className: 'form-field' });
+  appendChildren(label, [createElement('span', { text: labelText }), control]);
+  return label;
+}
+
 function weekIdFromHash() {
   const hash = window.location.hash || '';
   const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : '';
@@ -31,6 +37,22 @@ function seasonTypeLabel(value) {
 function weekLabel(week) {
   if (!week) return 'Selected Week';
   return `Season ${week.season} - ${seasonTypeLabel(week.seasonType)} Week ${week.nflWeek}`;
+}
+
+function selectorWeekLabel(week) {
+  const label = `${seasonTypeLabel(week && week.seasonType)} Week ${week && week.nflWeek}`;
+  if (week && week.current) return `Current - ${label}`;
+  return `${week && week.season} - ${label}`;
+}
+
+function hasWeeklyResults(data) {
+  const weeklyResults = data && data.weeklyResults;
+  return Boolean(
+    weeklyResults &&
+    weeklyResults.available === true &&
+    Array.isArray(weeklyResults.places) &&
+    weeklyResults.places.length,
+  );
 }
 
 function displayValue(value) {
@@ -163,13 +185,19 @@ export function createWeeklyResultsView() {
   const status = createElement('p', { className: 'muted', text: 'Loading Weekly Results...', attributes: { role: 'status', 'aria-live': 'polite' } });
   const title = createElement('h1', { text: 'Weekly Results' });
   const subtitle = createElement('p', { className: 'muted' });
+  const weekSelect = createElement('select', { attributes: { name: 'weekId', disabled: 'disabled' } });
   const results = createElement('section', { className: 'weekly-results-list' });
   const back = createElement('button', { className: 'secondary-button', text: 'Back to Player Dashboard', attributes: { type: 'button' } });
+  const boardCache = new Map();
+  let resultsWeeks = [];
+  let availableWeekIds = [];
+  let activeSelectedWeekId = '';
   back.addEventListener('click', () => navigateTo('player-dashboard'));
   appendChildren(card, [
     createElement('p', { className: 'eyebrow', text: 'Results' }),
     title,
     subtitle,
+    createField('Week', weekSelect),
     status,
     results,
     createElement('div', { className: 'button-row' }),
@@ -178,29 +206,116 @@ export function createWeeklyResultsView() {
   wrapper.appendChild(createPlayerNav('player-weekly-results'));
   wrapper.appendChild(card);
 
+  function cacheBoardData(data) {
+    const weekId = data && (data.selectedWeekId || data.week && data.week.weekId);
+    if (weekId) boardCache.set(weekId, data);
+  }
+
+  async function fetchBoardData(weekId = '') {
+    if (weekId && boardCache.has(weekId)) return boardCache.get(weekId);
+    const result = await requestAction('player.week.picksBoard', {
+      sessionToken: getPlayerSessionToken(),
+      ...(weekId ? { weekId } : {}),
+    });
+    const data = result.data || {};
+    cacheBoardData(data);
+    return data;
+  }
+
+  function renderWeekOptions(selectedWeekId = '') {
+    weekSelect.replaceChildren();
+    const orderedWeeks = [...resultsWeeks].sort((a, b) => {
+      const aIndex = availableWeekIds.indexOf(a.weekId);
+      const bIndex = availableWeekIds.indexOf(b.weekId);
+      return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+    });
+    orderedWeeks.forEach((week) => {
+      const option = createElement('option', { text: selectorWeekLabel(week), attributes: { value: week.weekId } });
+      if (week.weekId === selectedWeekId) option.selected = true;
+      weekSelect.appendChild(option);
+    });
+    weekSelect.disabled = resultsWeeks.length < 2;
+  }
+
+  function rememberResultsWeek(week) {
+    if (!week || !week.weekId || resultsWeeks.some((row) => row.weekId === week.weekId)) return;
+    resultsWeeks = [...resultsWeeks, week];
+  }
+
+  async function discoverResultsWeeks(availableWeeks = []) {
+    for (const week of availableWeeks) {
+      if (!wrapper.isConnected) return;
+      if (!week || !week.weekId || boardCache.has(`checked:${week.weekId}`)) continue;
+      try {
+        const data = await fetchBoardData(week.weekId);
+        if (!wrapper.isConnected) return;
+        boardCache.set(`checked:${week.weekId}`, true);
+        if (hasWeeklyResults(data)) {
+          rememberResultsWeek(data.week || week);
+          renderWeekOptions(activeSelectedWeekId);
+        }
+      } catch {
+        boardCache.set(`checked:${week.weekId}`, true);
+      }
+    }
+  }
+
+  async function findFirstResultsWeek(availableWeeks = []) {
+    for (const week of availableWeeks) {
+      if (!week || !week.weekId) continue;
+      try {
+        const data = await fetchBoardData(week.weekId);
+        boardCache.set(`checked:${week.weekId}`, true);
+        if (hasWeeklyResults(data)) {
+          rememberResultsWeek(data.week || week);
+          return data;
+        }
+      } catch {
+        boardCache.set(`checked:${week.weekId}`, true);
+      }
+    }
+    return null;
+  }
+
+  function renderSelectedResults(data, requestedWeekId = '') {
+    const selectedWeekId = data.selectedWeekId || data.week && data.week.weekId || requestedWeekId;
+    activeSelectedWeekId = selectedWeekId;
+    if (hasWeeklyResults(data)) rememberResultsWeek(data.week);
+    title.textContent = data.week ? 'Weekly Results' : 'Weekly Results';
+    subtitle.textContent = weekLabel(data.week);
+    status.textContent = '';
+    results.replaceChildren(renderResults(data));
+    renderWeekOptions(selectedWeekId);
+    if (hasWeeklyResults(data)) {
+      fireWeeklyResultsConfetti(selectedWeekId);
+    }
+  }
+
   async function loadResults() {
     status.classList.remove('error-text');
     status.textContent = 'Loading Weekly Results...';
     results.replaceChildren();
+    weekSelect.disabled = true;
     try {
       const weekId = weekIdFromHash();
-      const result = await requestAction('player.week.picksBoard', {
-        sessionToken: getPlayerSessionToken(),
-        ...(weekId ? { weekId } : {}),
-      });
-      const data = result.data || {};
-      title.textContent = data.week ? 'Weekly Results' : 'Weekly Results';
-      subtitle.textContent = weekLabel(data.week);
-      status.textContent = '';
-      results.appendChild(renderResults(data));
-      if (data.weeklyResults && data.weeklyResults.available === true) {
-        fireWeeklyResultsConfetti(data.selectedWeekId || data.week && data.week.weekId || weekId);
+      let data = await fetchBoardData(weekId);
+      availableWeekIds = (data.availableWeeks || []).map((week) => week.weekId);
+      if (!weekId && !hasWeeklyResults(data)) {
+        const fallback = await findFirstResultsWeek(data.availableWeeks || []);
+        if (fallback) data = fallback;
       }
+      renderSelectedResults(data, weekId);
+      discoverResultsWeeks(data.availableWeeks || []);
     } catch (error) {
       status.textContent = error.message || 'Unable to load Weekly Results.';
       status.classList.add('error-text');
+      weekSelect.disabled = true;
     }
   }
+
+  weekSelect.addEventListener('change', () => {
+    if (weekSelect.value) navigateTo(`player-weekly-results?weekId=${encodeURIComponent(weekSelect.value)}`);
+  });
 
   loadResults();
   return wrapper;
