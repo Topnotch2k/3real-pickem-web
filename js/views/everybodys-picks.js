@@ -121,6 +121,8 @@ function renderPlayerCell(row) {
   ]);
   if (row.isWeeklyWinner === true) {
     cell.appendChild(createElement('span', { className: 'status-pill', text: 'Winner' }));
+  } else if (row.isClinchedWeeklyWinner === true) {
+    cell.appendChild(createElement('span', { className: 'status-pill', text: 'CLINCHED 🏆' }));
   }
   return cell;
 }
@@ -344,11 +346,12 @@ function renderCurrentPot(data) {
 
 function renderWeeklyResultsBanner(data, config) {
   const weekId = data && data.selectedWeekId;
+  const hasFinalResults = data.weeklyResults?.available === true,
+    hasClinchedChampion = Boolean(data.clinchedChampion);
   if (
     !config.resultsRoute ||
     !weekId ||
-    data.grading?.graded !== true ||
-    data.weeklyResults?.available !== true
+    (!hasFinalResults && !hasClinchedChampion)
   ) {
     return null;
   }
@@ -357,8 +360,8 @@ function renderWeeklyResultsBanner(data, config) {
     attributes: { type: 'button' },
   });
   appendChildren(button, [
-    createElement('span', { className: 'weekly-results-banner-title', text: 'WEEKLY RESULTS ARE IN \u{1F3C6}' }),
-    createElement('span', { className: 'weekly-results-banner-copy', text: 'CLICK HERE TO SEE CHAMPION & PODIUM \u2192' }),
+    createElement('span', { className: 'weekly-results-banner-title', text: hasFinalResults ? 'WEEKLY RESULTS ARE IN \u{1F3C6}' : 'WEEK CHAMPION CLINCHED \u{1F3C6}' }),
+    createElement('span', { className: 'weekly-results-banner-copy', text: hasFinalResults ? 'CLICK HERE TO SEE CHAMPION & PODIUM \u2192' : 'CLICK HERE TO SEE CHAMPION \u2192' }),
   ]);
   button.addEventListener('click', () => {
     navigateTo(`${config.resultsRoute}?weekId=${encodeURIComponent(weekId)}`);

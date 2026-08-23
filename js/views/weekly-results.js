@@ -55,6 +55,14 @@ function hasWeeklyResults(data) {
   );
 }
 
+function hasClinchedChampion(data) {
+  return Boolean(data && data.clinchedChampion);
+}
+
+function hasResultsOrClinch(data) {
+  return hasWeeklyResults(data) || hasClinchedChampion(data);
+}
+
 function displayValue(value) {
   return value === '' || value === null || value === undefined ? '-' : String(value);
 }
@@ -124,10 +132,41 @@ function renderPrizePool(currentPot) {
   return card;
 }
 
+function renderClinchedChampion(data) {
+  const fragment = document.createDocumentFragment();
+  const champion = data.clinchedChampion || {};
+  const card = createElement('article', { className: 'weekly-results-card weekly-results-champion' });
+  const header = createElement('div', { className: 'weekly-results-card-header' });
+  appendChildren(header, [
+    createElement('p', { className: 'eyebrow', text: 'WEEK CHAMPION — CLINCHED 🏆' }),
+    createElement('span', { className: 'weekly-results-trophy', text: '🏆' }),
+  ]);
+  card.appendChild(header);
+  const player = createElement('div', { className: 'weekly-results-player' });
+  appendChildren(player, [
+    createElement('h3', { text: champion.playerName || 'Unknown player' }),
+    createElement('p', { className: 'muted', text: champion.entryLabel || champion.entryId || 'Entry' }),
+    createElement('p', {
+      className: 'weekly-results-score weekly-results-score-large',
+      text: `${displayValue(champion.correctPicks)} of ${displayValue(champion.totalGames)} Correct`,
+    }),
+    createElement('p', {
+      className: 'muted',
+      text: 'The weekly winner is decided. Final podium and tiebreaker details will appear after the remaining game is final.',
+    }),
+    renderBadges(champion.badgeCodes),
+  ]);
+  card.appendChild(player);
+  fragment.appendChild(card);
+  if (data.currentPot && data.currentPot.visible === true) fragment.appendChild(renderPrizePool(data.currentPot));
+  return fragment;
+}
+
 function renderResults(data) {
   const fragment = document.createDocumentFragment();
   const results = data.weeklyResults || {};
   if (!results.available) {
+    if (hasClinchedChampion(data)) return renderClinchedChampion(data);
     fragment.appendChild(createElement('p', { className: 'muted', text: 'Weekly Results appear after this Week is graded.' }));
     return fragment;
   }
@@ -253,7 +292,7 @@ export function createWeeklyResultsView() {
         const data = await fetchBoardData(week.weekId);
         if (!wrapper.isConnected) return;
         boardCache.set(`checked:${week.weekId}`, true);
-        if (hasWeeklyResults(data)) {
+        if (hasResultsOrClinch(data)) {
           rememberResultsWeek(data.week || week);
           renderWeekOptions(activeSelectedWeekId);
         }
@@ -269,7 +308,7 @@ export function createWeeklyResultsView() {
       try {
         const data = await fetchBoardData(week.weekId);
         boardCache.set(`checked:${week.weekId}`, true);
-        if (hasWeeklyResults(data)) {
+        if (hasResultsOrClinch(data)) {
           rememberResultsWeek(data.week || week);
           return data;
         }
@@ -283,7 +322,7 @@ export function createWeeklyResultsView() {
   function renderSelectedResults(data, requestedWeekId = '') {
     const selectedWeekId = data.selectedWeekId || data.week && data.week.weekId || requestedWeekId;
     activeSelectedWeekId = selectedWeekId;
-    if (hasWeeklyResults(data)) rememberResultsWeek(data.week);
+    if (hasResultsOrClinch(data)) rememberResultsWeek(data.week);
     title.textContent = data.week ? 'Weekly Results' : 'Weekly Results';
     subtitle.textContent = weekLabel(data.week);
     status.textContent = '';
@@ -303,7 +342,7 @@ export function createWeeklyResultsView() {
       const weekId = weekIdFromHash();
       let data = await fetchBoardData(weekId);
       availableWeekIds = (data.availableWeeks || []).map((week) => week.weekId);
-      if (!weekId && !hasWeeklyResults(data)) {
+      if (!weekId && !hasResultsOrClinch(data)) {
         const fallback = await findFirstResultsWeek(data.availableWeeks || []);
         if (fallback) data = fallback;
       }
