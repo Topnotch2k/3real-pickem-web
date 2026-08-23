@@ -113,12 +113,19 @@ function renderHeaderCell(game, label) {
   return cell;
 }
 
+function correctPicksLabel(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number} Correct` : '';
+}
+
 function renderPlayerCell(row) {
   const cell = createElement('th', { className: 'picks-board-sticky picks-board-player', attributes: { scope: 'row' } });
+  const correctLabel = correctPicksLabel(row.correctPicks);
   appendChildren(cell, [
     createElement('span', { text: row.playerName || 'Unknown player' }),
     createElement('span', { className: 'muted', text: row.entryLabel || row.entryId || 'Entry' }),
-  ]);
+    correctLabel ? createElement('span', { className: 'muted', text: correctLabel }) : null,
+  ].filter(Boolean));
   if (row.isWeeklyWinner === true) {
     cell.appendChild(createElement('span', { className: 'status-pill', text: 'Winner' }));
   } else if (row.isClinchedWeeklyWinner === true) {
