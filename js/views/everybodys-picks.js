@@ -122,7 +122,7 @@ function renderPlayerCell(row) {
   if (row.isWeeklyWinner === true) {
     cell.appendChild(createElement('span', { className: 'status-pill', text: 'Winner' }));
   } else if (row.isClinchedWeeklyWinner === true) {
-    cell.appendChild(createElement('span', { className: 'status-pill', text: 'CLINCHED 🏆' }));
+    cell.appendChild(createElement('span', { className: 'status-pill', text: 'Week Champion 🏆' }));
   }
   return cell;
 }

@@ -59,8 +59,20 @@ function hasClinchedChampion(data) {
   return Boolean(data && data.clinchedChampion);
 }
 
+function hasEarlyWeeklyResults(data) {
+  return Boolean(
+    data &&
+    data.earlyWeeklyResults &&
+    data.earlyWeeklyResults.available === true &&
+    (
+      Array.isArray(data.earlyWeeklyResults.places) && data.earlyWeeklyResults.places.length ||
+      Array.isArray(data.earlyWeeklyResults.pendingPlaces) && data.earlyWeeklyResults.pendingPlaces.length
+    ),
+  );
+}
+
 function hasResultsOrClinch(data) {
-  return hasWeeklyResults(data) || hasClinchedChampion(data);
+  return hasWeeklyResults(data) || hasEarlyWeeklyResults(data) || hasClinchedChampion(data);
 }
 
 function displayValue(value) {
@@ -132,33 +144,45 @@ function renderPrizePool(currentPot) {
   return card;
 }
 
-function renderClinchedChampion(data) {
-  const fragment = document.createDocumentFragment();
-  const champion = data.clinchedChampion || {};
-  const card = createElement('article', { className: 'weekly-results-card weekly-results-champion' });
-  const header = createElement('div', { className: 'weekly-results-card-header' });
-  appendChildren(header, [
-    createElement('p', { className: 'eyebrow', text: 'WEEK CHAMPION — CLINCHED 🏆' }),
-    createElement('span', { className: 'weekly-results-trophy', text: '🏆' }),
-  ]);
-  card.appendChild(header);
-  const player = createElement('div', { className: 'weekly-results-player' });
-  appendChildren(player, [
-    createElement('h3', { text: champion.playerName || 'Unknown player' }),
-    createElement('p', { className: 'muted', text: champion.entryLabel || champion.entryId || 'Entry' }),
-    createElement('p', {
-      className: 'weekly-results-score weekly-results-score-large',
-      text: `${displayValue(champion.correctPicks)} of ${displayValue(champion.totalGames)} Correct`,
-    }),
+function pendingPlaceLabel(place) {
+  if (place === 1) return 'Champion';
+  if (place === 2) return '2nd Place';
+  if (place === 3) return '3rd Place';
+  return `${place}th Place`;
+}
+
+function renderPendingPodium(results) {
+  const pending = Array.isArray(results.pendingPlaces) ? results.pendingPlaces : [];
+  if (!pending.length) return null;
+  const section = createElement('section', { className: 'state-card' });
+  const labels = pending.map((place) => pendingPlaceLabel(Number(place))).join(', ');
+  appendChildren(section, [
+    createElement('p', { className: 'eyebrow', text: 'Pending' }),
     createElement('p', {
       className: 'muted',
-      text: 'The weekly winner is decided. Final podium and tiebreaker details will appear after the remaining game is final.',
+      text: results.tiebreakerRequiredForPodium === true
+        ? `${labels} ${pending.length === 1 ? 'is' : 'are'} still tied and will be decided by the tiebreaker game.`
+        : `${labels} ${pending.length === 1 ? 'is' : 'are'} still pending.`,
     }),
-    renderBadges(champion.badgeCodes),
   ]);
-  card.appendChild(player);
-  fragment.appendChild(card);
+  return section;
+}
+
+function renderEarlyWeeklyResults(data) {
+  const fragment = document.createDocumentFragment();
+  const early = data.earlyWeeklyResults || {};
+  const places = Array.isArray(early.places) ? early.places : [];
+  const champion = places.filter((row) => Number(row.place) === 1);
+  if (champion.length) fragment.appendChild(renderResultCard(1, champion, true));
   if (data.currentPot && data.currentPot.visible === true) fragment.appendChild(renderPrizePool(data.currentPot));
+  const podium = createElement('section', { className: 'weekly-results-podium' });
+  [2, 3].forEach((place) => {
+    const rows = places.filter((row) => Number(row.place) === place);
+    if (rows.length) podium.appendChild(renderResultCard(place, rows));
+  });
+  if (podium.children.length) fragment.appendChild(podium);
+  const pending = renderPendingPodium(early);
+  if (pending) fragment.appendChild(pending);
   return fragment;
 }
 
@@ -166,7 +190,7 @@ function renderResults(data) {
   const fragment = document.createDocumentFragment();
   const results = data.weeklyResults || {};
   if (!results.available) {
-    if (hasClinchedChampion(data)) return renderClinchedChampion(data);
+    if (hasEarlyWeeklyResults(data)) return renderEarlyWeeklyResults(data);
     fragment.appendChild(createElement('p', { className: 'muted', text: 'Weekly Results appear after this Week is graded.' }));
     return fragment;
   }
