@@ -55,6 +55,16 @@ function hasWeeklyResults(data) {
   );
 }
 
+function hasFinalChampionForConfetti(data) {
+  const weeklyPlaces = data && data.weeklyResults && Array.isArray(data.weeklyResults.places)
+      ? data.weeklyResults.places
+      : [],
+    earlyPlaces = data && data.earlyWeeklyResults && Array.isArray(data.earlyWeeklyResults.places)
+      ? data.earlyWeeklyResults.places
+      : [];
+  return weeklyPlaces.some((row) => Number(row.place) === 1) || earlyPlaces.some((row) => Number(row.place) === 1);
+}
+
 function hasClinchedChampion(data) {
   return Boolean(data && data.clinchedChampion);
 }
@@ -352,7 +362,7 @@ export function createWeeklyResultsView() {
     status.textContent = '';
     results.replaceChildren(renderResults(data));
     renderWeekOptions(selectedWeekId);
-    if (hasWeeklyResults(data)) {
+    if (hasFinalChampionForConfetti(data)) {
       fireWeeklyResultsConfetti(selectedWeekId);
     }
   }
