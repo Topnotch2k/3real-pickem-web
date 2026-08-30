@@ -63,6 +63,12 @@ function formatWeekday(value, fallback = 'Not available') {
   }).format(date);
 }
 
+function opensInFuture(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date.getTime() > Date.now();
+}
+
 function parseGameScore(input) {
   const value = input.value.trim();
   if (!/^\d+$/.test(value)) return null;
@@ -204,6 +210,12 @@ export function createManagerWeekView() {
       openButton.disabled = inFlight;
       openButton.addEventListener('click', () => openWeek(openButton));
       actions.appendChild(openButton);
+    }
+    if (week.status === 'open' && opensInFuture(week.opensAt)) {
+      const openNowButton = createElement('button', { className: 'primary-button', text: 'OPEN WEEK NOW', attributes: { type: 'button' } });
+      openNowButton.disabled = inFlight;
+      openNowButton.addEventListener('click', () => openWeek(openNowButton));
+      actions.appendChild(openNowButton);
     }
     if (week.status !== 'archived') {
       const archiveButton = createElement('button', { className: 'secondary-button', text: 'Archive Week', attributes: { type: 'button' } });
