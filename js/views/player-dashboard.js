@@ -633,8 +633,36 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
         }),
         details,
       ]);
+      if (['pending', 'approved'].indexOf(payment.status) !== -1) {
+        card.appendChild(createPaymentMethodControls(payment));
+      }
       historyList.appendChild(card);
     });
+  }
+
+  function createPaymentMethodControls(payment) {
+    const form = createElement('form', { className: 'auth-form' });
+    const select = createElement('select', { attributes: { name: 'method' } });
+    const methods = paymentOptions && Array.isArray(paymentOptions.methods) ? paymentOptions.methods : [];
+    methods.forEach((method) => {
+      select.appendChild(createElement('option', { text: method.label, attributes: { value: method.value } }));
+    });
+    select.value = String(payment.method || 'cash');
+    const buttons = createElement('div', { className: 'button-row' });
+    const update = createElement('button', { className: 'secondary-button', text: 'Update Method', attributes: { type: 'submit' } });
+    const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+    const setDisabled = (disabled) => {
+      select.disabled = disabled || !methods.length;
+      update.disabled = disabled || !methods.length;
+    };
+    setDisabled(submitting);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await changePaymentMethod(payment, select.value, status, setDisabled);
+    });
+    appendChildren(buttons, [update]);
+    appendChildren(form, [createField('Payment method', select), buttons, status]);
+    return form;
   }
 
   async function loadOptions() {
@@ -860,6 +888,38 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       updateFormAvailability();
     }
   });
+
+  async function changePaymentMethod(payment, method, status, setDisabled) {
+    if (submitting || !payment || !payment.paymentId) {
+      return;
+    }
+    if (String(payment.method || '') === String(method || '')) {
+      status.classList.remove('error-text');
+      status.textContent = `Payment method is already ${paymentMethodLabel(method)}.`;
+      return;
+    }
+    submitting = true;
+    status.classList.remove('error-text');
+    status.textContent = 'Updating payment method...';
+    setDisabled(true);
+    updateFormAvailability();
+    try {
+      await playerAction('player.payment.changeMethod', {
+        paymentId: payment.paymentId,
+        method,
+      });
+      status.textContent = `Payment method updated to ${paymentMethodLabel(method)}.`;
+      await loadPayments();
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    } finally {
+      submitting = false;
+      setDisabled(false);
+      updateFormAvailability();
+    }
+  }
+
   historyFilter.addEventListener('change', () => {
     paymentHistoryFilter = historyFilter.value;
     renderHistory();
