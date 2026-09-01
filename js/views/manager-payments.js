@@ -82,6 +82,14 @@ function paymentMethodLabel(method) {
   }[method] || String(method || 'Unknown');
 }
 
+const PAYMENT_METHOD_OPTIONS = [
+  ['cash', 'Cash'],
+  ['cash_app', 'Cash App'],
+  ['apple_pay', 'Apple Pay'],
+  ['zelle', 'Zelle'],
+  ['chime', 'Chime'],
+];
+
 function paymentStatusLabel(status) {
   return {
     pending: 'Pending',
@@ -108,6 +116,7 @@ function shouldRefreshAfterMutationError(error) {
     'APPROVAL_RESPONSE_INCOMPLETE',
     'MARK_PAID_RESPONSE_INCOMPLETE',
     'REJECTION_RESPONSE_INCOMPLETE',
+    'CHANGE_METHOD_RESPONSE_INCOMPLETE',
     'PAYMENT_ALREADY_APPROVED',
     'PAYMENT_ALREADY_REJECTED',
     'PAYMENT_STATUS_INVALID',
@@ -136,6 +145,14 @@ function incompleteRejectionResponseError() {
   error.code = 'REJECTION_RESPONSE_INCOMPLETE';
   error.reconciledMessage = 'Payment rejection may have completed, but the response was incomplete. The payment list was refreshed to confirm its status.';
   error.refreshFailedMessage = 'Payment rejection may have completed, but the response was incomplete and the payment list could not refresh.';
+  return error;
+}
+
+function incompleteChangeMethodResponseError() {
+  const error = new Error('Payment method update may have completed, but the response was incomplete.');
+  error.code = 'CHANGE_METHOD_RESPONSE_INCOMPLETE';
+  error.reconciledMessage = 'Payment method update may have completed, but the payment list was refreshed to confirm its status.';
+  error.refreshFailedMessage = 'Payment method update may have completed, but the response was incomplete and the payment list could not refresh.';
   return error;
 }
 
@@ -479,16 +496,32 @@ export function createManagerPaymentsView() {
 
   function createMarkPaidControls(payment) {
     const region = createElement('section');
+    const methodForm = createElement('form', { className: 'auth-form' });
+    const methodSelect = createElement('select', { attributes: { name: 'method' } });
+    PAYMENT_METHOD_OPTIONS.forEach(([value, label]) => {
+      methodSelect.appendChild(createElement('option', { text: label, attributes: { value } }));
+    });
+    methodSelect.value = String(payment.method || 'cash');
+    const methodButtons = createElement('div', { className: 'button-row' });
+    const updateMethod = createElement('button', { className: 'secondary-button', text: 'Update Method', attributes: { type: 'submit' } });
     const actions = createElement('div', { className: 'button-row' });
     const markPaid = createElement('button', { className: 'primary-button', text: 'Mark Paid', attributes: { type: 'button' } });
     const mutationStatus = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
     const setDisabled = (disabled) => {
+      methodSelect.disabled = disabled;
+      updateMethod.disabled = disabled;
       markPaid.disabled = disabled;
     };
     setDisabled(inFlightPaymentIds.has(payment.paymentId) || blockedPaymentIds.has(payment.paymentId));
+    methodForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await changePaymentMethod(payment, methodSelect.value, mutationStatus, setDisabled);
+    });
     markPaid.addEventListener('click', () => markPaymentPaid(payment, mutationStatus, setDisabled));
+    appendChildren(methodButtons, [updateMethod]);
+    appendChildren(methodForm, [createField('Payment method', methodSelect), methodButtons]);
     appendChildren(actions, [markPaid]);
-    appendChildren(region, [actions, mutationStatus]);
+    appendChildren(region, [methodForm, actions, mutationStatus]);
     return region;
   }
 
@@ -607,6 +640,60 @@ export function createManagerPaymentsView() {
       const entryCount = result.data.entries.length || returnedPayment.entriesCreatedCount || 0;
       const noun = entryCount === 1 ? 'entry was' : 'entries were';
       const successMessage = `Payment marked paid. ${entryCount} ${noun} created or confirmed.`;
+      mutationStatus.textContent = successMessage;
+      applyMutationPayment(payment, returnedPayment, successMessage);
+    } catch (error) {
+      mutationStatus.textContent = error.message;
+      mutationStatus.classList.add('error-text');
+      if (shouldRefreshAfterMutationError(error)) {
+        blockPayment(payment.paymentId, error);
+        const refreshOutcome = await loadPayments({ preserveMessage: true });
+        if (refreshOutcome.status === 'applied') {
+          publishReconciliationNotice(error.reconciledMessage || error.message);
+        } else if (refreshOutcome.status === 'failed') {
+          const refreshFailedMessage = error.refreshFailedMessage || `${error.message} Payment list could not refresh.`;
+          mutationStatus.textContent = refreshFailedMessage;
+          publishReconciliationNotice(refreshFailedMessage);
+        }
+      }
+    } finally {
+      inFlightPaymentIds.delete(payment.paymentId);
+      statusSelect.disabled = inFlightPaymentIds.size > 0;
+      weekSelect.disabled = inFlightPaymentIds.size > 0;
+      const reconciliation = reconcileBlockedPayments();
+      if (reconciliation.changed) {
+        renderPayments();
+      }
+      publishReconciliationNotices(reconciliation.notices);
+      if (!blockedPaymentIds.has(payment.paymentId)) {
+        setDisabled(false);
+      }
+    }
+  }
+
+  async function changePaymentMethod(payment, method, mutationStatus, setDisabled) {
+    if (inFlightPaymentIds.has(payment.paymentId) || blockedPaymentIds.has(payment.paymentId)) {
+      return;
+    }
+    const nextMethodLabel = paymentMethodLabel(method);
+    if (String(payment.method || '') === String(method || '')) {
+      mutationStatus.classList.remove('error-text');
+      mutationStatus.textContent = `Payment method is already ${nextMethodLabel}.`;
+      return;
+    }
+    inFlightPaymentIds.add(payment.paymentId);
+    statusSelect.disabled = true;
+    weekSelect.disabled = true;
+    setDisabled(true);
+    mutationStatus.classList.remove('error-text');
+    mutationStatus.textContent = 'Updating payment method...';
+    try {
+      const result = await managerAction('manager.payment.changeMethod', {
+        paymentId: payment.paymentId,
+        method,
+      });
+      const returnedPayment = validateMutationPayment(result, payment, 'approved', incompleteChangeMethodResponseError);
+      const successMessage = `Payment method updated to ${paymentMethodLabel(returnedPayment.method)}.`;
       mutationStatus.textContent = successMessage;
       applyMutationPayment(payment, returnedPayment, successMessage);
     } catch (error) {
