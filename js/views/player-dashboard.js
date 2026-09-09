@@ -368,6 +368,8 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
   let latestEntrySheetsData = null;
   let showingRejectedRequest = null;
   let dismissedRejectedPaymentId = '';
+  let showingPaidRequest = null;
+  let dismissedPaidPaymentId = '';
 
   const requestCard = createElement('section', { className: 'state-card compact-card' });
   const activeStateRegion = createElement('section', { className: 'payment-state-screen', attributes: { 'aria-live': 'polite' } });
@@ -460,6 +462,14 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
     }, PAYMENT_SUCCESS_MESSAGE_MS);
   }
 
+  function showPaidSuccessState(payment) {
+    if (!payment || !payment.paymentId) {
+      return;
+    }
+    showingPaidRequest = payment;
+    dismissedPaidPaymentId = '';
+  }
+
   function isPaymentStatusMessage(value) {
     if (value.startsWith('Payment request submitted. The manager must approve it')) {
       return true;
@@ -489,6 +499,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
     if (previousActiveRequest) {
       const resolvedPayment = nextPayments.find((payment) => payment.paymentId === previousActiveRequest.paymentId);
       if (resolvedPayment && resolvedPayment.status === 'paid') {
+        showPaidSuccessState(resolvedPayment);
         showTemporaryPaymentSuccess();
         if (typeof options.refreshEntrySheets === 'function') {
           options.refreshEntrySheets();
@@ -793,18 +804,24 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       return;
     }
 
-    const paidRequest = paidRequestForCurrentWeek();
-    if (paidRequest) {
+    const paidRequest = showingPaidRequest;
+    if (paidRequest && paidRequest.paymentId !== dismissedPaidPaymentId) {
       if (message.parentElement !== requestCard) {
         requestCard.appendChild(message);
       }
       const makePicks = createElement('button', { className: 'primary-button', text: 'Make My Picks', attributes: { type: 'button' } });
+      const buyAnother = createElement('button', { className: 'secondary-button', text: 'Buy Another Entry', attributes: { type: 'button' } });
       makePicks.addEventListener('click', () => navigateTo(makePicksRoute()));
+      buyAnother.addEventListener('click', () => {
+        dismissedPaidPaymentId = paidRequest.paymentId || '';
+        showingPaidRequest = null;
+        renderActivePaymentState();
+      });
       appendChildren(activeStateRegion, [
         createElement('p', { className: 'eyebrow', text: 'Payment Received ✅' }),
         createElement('h2', { text: 'YOUR ENTRY IS READY 🏈' }),
         createElement('p', { className: 'muted', text: 'Your payment has been confirmed and your entry is ready.' }),
-        appendChildren(createElement('div', { className: 'button-row' }), [makePicks]),
+        appendChildren(createElement('div', { className: 'button-row' }), [makePicks, buyAnother]),
       ]);
       appendChildren(requestCard, [activeStateRegion, message]);
       return;
@@ -924,6 +941,13 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
         const nextPayments = data.payments || [];
         payments = nextPayments;
         applyPaymentInstructionResponse(data, preserveCreated);
+        const previousActiveRequest = currentWeekPaymentFrom(previousPayments, ['pending', 'approved']);
+        if (previousActiveRequest) {
+          const resolvedPayment = nextPayments.find((payment) => payment.paymentId === previousActiveRequest.paymentId);
+          if (resolvedPayment && resolvedPayment.status === 'paid') {
+            showPaidSuccessState(resolvedPayment);
+          }
+        }
         const paidRequest = paidRequestForCurrentWeek();
         if (paidRequest) {
           await loadEntrySheetsForPaid();
