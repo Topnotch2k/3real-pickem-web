@@ -347,7 +347,7 @@ export function createInviteFriendsCard(player, bootstrapRequest) {
 }
 
 export function createPaymentWorkspace(bootstrapRequest, options = {}) {
-  const PAYMENT_REFRESH_INTERVAL_MS = 60000;
+  const PAYMENT_REFRESH_INTERVAL_MS = 20000;
   const PAYMENT_SUCCESS_MESSAGE_MS = 5000;
   let paymentOptions = null;
   let payments = [];
@@ -365,8 +365,12 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
   let paymentRefreshStarted = false;
   let paymentInstructions = null;
   let paymentInstructionsUnavailable = false;
+  let latestEntrySheetsData = null;
+  let showingRejectedRequest = null;
+  let dismissedRejectedPaymentId = '';
 
   const requestCard = createElement('section', { className: 'state-card compact-card' });
+  const activeStateRegion = createElement('section', { className: 'payment-state-screen', attributes: { 'aria-live': 'polite' } });
   const form = createElement('form', { className: 'auth-form dashboard-payment-form' });
   const methodSelect = createElement('select', { attributes: { name: 'method', disabled: 'disabled' } });
   const quantitySelect = createElement('select', { attributes: { name: 'entriesPaid', disabled: 'disabled' } });
@@ -414,6 +418,20 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       return null;
     }
     return payments.find((payment) => ['pending', 'approved'].indexOf(payment.status) !== -1 && payment.weekId === paymentOptions.week.weekId) || null;
+  }
+
+  function paidRequestForCurrentWeek() {
+    if (!paymentOptions || !paymentOptions.week) {
+      return null;
+    }
+    return payments.find((payment) => payment.status === 'paid' && payment.weekId === paymentOptions.week.weekId) || null;
+  }
+
+  function rejectedRequestForCurrentWeek() {
+    if (!paymentOptions || !paymentOptions.week) {
+      return null;
+    }
+    return payments.find((payment) => payment.status === 'rejected' && payment.weekId === paymentOptions.week.weekId) || null;
   }
 
   function currentWeekPaymentFrom(list, statuses) {
@@ -568,9 +586,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
     redeemFreeEntry.disabled = !paymentOptions || !paymentsLoaded || submitting || !freeEntryAvailable;
     freeEntryBalance.textContent = `Free entries available: ${Number(rewardSummary.unusedFreeEntries || 0)}`;
     freeEntryBalance.className = `status-pill ${freeEntryAvailable ? '' : 'status-pill-muted'}`;
-    pendingNotice.textContent = activeRequest
-      ? 'You already have a payment request for this week. Wait for the manager to reject it before submitting another one.'
-      : '';
+    pendingNotice.textContent = '';
   }
 
   function populateOptions() {
@@ -633,11 +649,201 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
         }),
         details,
       ]);
-      if (['pending', 'approved'].indexOf(payment.status) !== -1) {
+      const activeRequest = activeRequestForCurrentWeek();
+      if (
+        ['pending', 'approved'].indexOf(payment.status) !== -1 &&
+        (!activeRequest || payment.paymentId !== activeRequest.paymentId)
+      ) {
         card.appendChild(createPaymentMethodControls(payment));
       }
       historyList.appendChild(card);
     });
+  }
+
+  function paymentSummaryRows(payment) {
+    const details = createElement('dl', { className: 'player-meta payment-state-summary' });
+    [
+      ['Payment method', paymentMethodLabel(payment.method)],
+      ['Entry quantity', String(payment.entriesPaid || 0)],
+      ['Amount', formatMoney(payment.amountDueCents, payment.amountDue)],
+    ].forEach(([label, value]) => {
+      details.appendChild(createElement('dt', { text: label }));
+      details.appendChild(createElement('dd', { text: value }));
+    });
+    return details;
+  }
+
+  function paymentDestinationBlock(payment) {
+    const amount = formatMoney(payment.amountDueCents, payment.amountDue);
+    const methodLabel = paymentMethodLabel(payment.method).toUpperCase();
+    const block = createElement('section', { className: 'payment-instructions payment-state-destination' });
+    if (payment.method === 'cash') {
+      appendChildren(block, [
+        createElement('p', { className: 'payment-instructions-amount', text: `Pay ${amount} in cash to the manager` }),
+      ]);
+      return block;
+    }
+    if (paymentInstructionsUnavailable) {
+      appendChildren(block, [
+        createElement('p', { className: 'payment-instructions-unavailable', text: 'Payment destination is temporarily unavailable.' }),
+        createElement('p', { className: 'muted', text: 'Contact the League Manager.' }),
+      ]);
+      return block;
+    }
+    if (!paymentInstructions || !paymentInstructions.destinationValue) {
+      appendChildren(block, [
+        createElement('p', { className: 'payment-instructions-unavailable', text: 'Payment destination is unavailable.' }),
+        createElement('p', { className: 'muted', text: 'Contact the League Manager.' }),
+      ]);
+      return block;
+    }
+    const destinationValue = String(paymentInstructions.destinationValue);
+    const copyStatus = createElement('span', {
+      className: 'muted payment-instructions-copy-status',
+      attributes: { role: 'status', 'aria-live': 'polite' },
+    });
+    const copy = createElement('button', {
+      className: 'secondary-button payment-instructions-copy',
+      text: 'Copy Payment Destination',
+      attributes: { type: 'button' },
+    });
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(destinationValue);
+        copyStatus.textContent = 'Copied';
+      } catch (error) {
+        copyStatus.textContent = 'Copy failed. Select and copy the destination.';
+      }
+    });
+    appendChildren(block, [
+      createElement('p', { className: 'payment-instructions-amount', text: `Send ${amount} through ${methodLabel}` }),
+      createElement('p', { className: 'payment-instructions-label', text: 'Send to:' }),
+      createElement('p', { className: 'payment-instructions-destination', text: destinationValue }),
+      appendChildren(createElement('div', { className: 'button-row payment-instructions-actions' }), [copy, copyStatus]),
+    ]);
+    return block;
+  }
+
+  function findFirstIncompleteEntry() {
+    const entries = latestEntrySheetsData && Array.isArray(latestEntrySheetsData.entries)
+      ? latestEntrySheetsData.entries
+      : [];
+    return entries.find((entry) => !entry.complete) || null;
+  }
+
+  async function loadEntrySheetsForPaid() {
+    try {
+      const data = (await playerAction('player.week.entrySheets')).data;
+      latestEntrySheetsData = data;
+    } catch {
+      latestEntrySheetsData = null;
+    }
+  }
+
+  function makePicksRoute() {
+    const entry = findFirstIncompleteEntry();
+    return entry && entry.entryId ? `player-entry-picks?entryId=${encodeURIComponent(entry.entryId)}` : 'player-picks';
+  }
+
+  function createMethodChangeSection(payment) {
+    if (!paymentOptions || !Array.isArray(paymentOptions.methods) || !paymentOptions.methods.length) {
+      return createElement('div');
+    }
+    const section = createElement('section', { className: 'payment-state-method-change' });
+    const toggle = createElement('button', { className: 'secondary-button', text: 'Change Payment Method', attributes: { type: 'button' } });
+    const formWrapper = createElement('div');
+    formWrapper.hidden = true;
+    toggle.addEventListener('click', () => {
+      formWrapper.hidden = !formWrapper.hidden;
+    });
+    formWrapper.appendChild(createPaymentMethodControls(payment));
+    appendChildren(section, [toggle, formWrapper]);
+    return section;
+  }
+
+  function renderActivePaymentState() {
+    requestCard.replaceChildren();
+    activeStateRegion.replaceChildren();
+    const activeRequest = activeRequestForCurrentWeek();
+    if (activeRequest) {
+      if (message.parentElement !== requestCard) {
+        requestCard.appendChild(message);
+      }
+      const isApproved = activeRequest.status === 'approved';
+      appendChildren(activeStateRegion, [
+        createElement('p', { className: 'eyebrow', text: isApproved ? 'Request Approved ✅' : 'Request Sent ✅' }),
+        createElement('h2', { text: isApproved ? 'SEND YOUR PAYMENT NOW' : 'WAITING FOR MANAGER APPROVAL' }),
+        createElement('p', {
+          className: 'muted',
+          text: isApproved
+            ? 'Your request was approved. Send your payment using the details below.'
+            : 'Your payment request was sent to the manager. Do not send payment yet. Your payment details will appear after the manager approves your request.',
+        }),
+        paymentSummaryRows(activeRequest),
+      ]);
+      if (isApproved) {
+        activeStateRegion.appendChild(paymentDestinationBlock(activeRequest));
+        appendChildren(activeStateRegion, [
+          createElement('p', { className: 'status-pill status-pill-muted', text: 'WAITING FOR PAYMENT CONFIRMATION ⏳' }),
+          createElement('p', { className: 'muted', text: 'After you send your payment, you do not need to press anything else. Stay here or come back later. The manager will confirm your payment after the money is received.' }),
+        ]);
+      }
+      activeStateRegion.appendChild(createMethodChangeSection(activeRequest));
+      appendChildren(requestCard, [activeStateRegion, message]);
+      return;
+    }
+
+    const paidRequest = paidRequestForCurrentWeek();
+    if (paidRequest) {
+      if (message.parentElement !== requestCard) {
+        requestCard.appendChild(message);
+      }
+      const makePicks = createElement('button', { className: 'primary-button', text: 'Make My Picks', attributes: { type: 'button' } });
+      makePicks.addEventListener('click', () => navigateTo(makePicksRoute()));
+      appendChildren(activeStateRegion, [
+        createElement('p', { className: 'eyebrow', text: 'Payment Received ✅' }),
+        createElement('h2', { text: 'YOUR ENTRY IS READY 🏈' }),
+        createElement('p', { className: 'muted', text: 'Your payment has been confirmed and your entry is ready.' }),
+        appendChildren(createElement('div', { className: 'button-row' }), [makePicks]),
+      ]);
+      appendChildren(requestCard, [activeStateRegion, message]);
+      return;
+    }
+
+    const rejectedRequest = showingRejectedRequest || rejectedRequestForCurrentWeek();
+    if (rejectedRequest && rejectedRequest.paymentId !== dismissedRejectedPaymentId) {
+      if (message.parentElement !== requestCard) {
+        requestCard.appendChild(message);
+      }
+      const startNew = createElement('button', { className: 'primary-button', text: 'Start New Payment Request', attributes: { type: 'button' } });
+      startNew.addEventListener('click', () => {
+        dismissedRejectedPaymentId = rejectedRequest.paymentId || '';
+        showingRejectedRequest = null;
+        renderActivePaymentState();
+      });
+      appendChildren(activeStateRegion, [
+        createElement('p', { className: 'eyebrow', text: 'Payment Request Rejected' }),
+        createElement('h2', { text: 'PAYMENT REQUEST REJECTED' }),
+        createElement('p', { className: 'muted', text: 'Your payment request was not approved. Start a new payment request to try again.' }),
+        appendChildren(createElement('div', { className: 'button-row' }), [startNew]),
+      ]);
+      appendChildren(requestCard, [activeStateRegion, message]);
+      return;
+    }
+
+    if (message.parentElement !== form) {
+      form.appendChild(message);
+    }
+    appendChildren(requestCard, [
+      createElement('p', { className: 'eyebrow', text: 'Entries' }),
+      createElement('h2', { text: 'Payment Request' }),
+      createElement('p', {
+        className: 'muted',
+        text: 'Choose how you will pay the manager. Submitting this request does not send money. Wait for manager approval before sending payment.',
+      }),
+      form,
+      instructionRegion,
+    ]);
   }
 
   function createPaymentMethodControls(payment) {
@@ -669,6 +875,11 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
     try {
       paymentOptions = await playerDashboardBootstrapSection(bootstrapRequest, 'paymentOptions');
       try {
+        latestEntrySheetsData = await playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets');
+      } catch {
+        latestEntrySheetsData = null;
+      }
+      try {
         const referralData = await playerDashboardBootstrapSection(bootstrapRequest, 'referrals');
         rewardSummary = referralData.rewardSummary || rewardSummary;
       } catch (error) {
@@ -680,6 +891,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       message.classList.remove('error-text');
       populateOptions();
       renderHistory();
+      renderActivePaymentState();
     } catch (error) {
       paymentOptions = null;
       price.textContent = 'Entry price unavailable.';
@@ -687,6 +899,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       message.textContent = error.message;
       message.classList.add('error-text');
       updateFormAvailability();
+      renderActivePaymentState();
     }
   }
 
@@ -711,10 +924,19 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
         const nextPayments = data.payments || [];
         payments = nextPayments;
         applyPaymentInstructionResponse(data, preserveCreated);
+        const paidRequest = paidRequestForCurrentWeek();
+        if (paidRequest) {
+          await loadEntrySheetsForPaid();
+        }
+        const rejectedRequest = rejectedRequestForCurrentWeek();
+        if (rejectedRequest && previousPayments.some((payment) => payment.paymentId === rejectedRequest.paymentId && payment.status !== 'rejected')) {
+          showingRejectedRequest = rejectedRequest;
+        }
         paymentsLoaded = true;
         historyStatus.classList.remove('error-text');
         renderHistory();
         updateFormAvailability();
+        renderActivePaymentState();
         reconcilePaymentMessage(previousPayments, nextPayments);
         updatePaymentHistoryRefresh();
       } catch (error) {
@@ -910,6 +1132,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       });
       status.textContent = `Payment method updated to ${paymentMethodLabel(method)}.`;
       await loadPayments();
+      renderActivePaymentState();
     } catch (error) {
       status.textContent = error.message;
       status.classList.add('error-text');
@@ -950,6 +1173,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       if (submittedPayment) {
         payments = [submittedPayment].concat(payments.filter((payment) => payment.paymentId !== submittedPayment.paymentId));
         renderHistory();
+        renderActivePaymentState();
       }
       applyPaymentInstructionResponse(result.data, true);
       clearLogicalRequest();
@@ -980,16 +1204,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
     pendingNotice,
     message,
   ]);
-  appendChildren(requestCard, [
-    createElement('p', { className: 'eyebrow', text: 'Entries' }),
-    createElement('h2', { text: 'Payment Request' }),
-    createElement('p', {
-      className: 'muted',
-      text: 'Choose how you will pay the manager. Cash, Cash App, Apple Pay, Zelle, and Chime are verified outside the app. Your entries are created only after the manager marks the approved payment paid.',
-    }),
-    form,
-    instructionRegion,
-  ]);
+  renderActivePaymentState();
   appendChildren(historyCard, [
     createElement('p', { className: 'eyebrow', text: 'Payments' }),
     createElement('h2', { text: 'My Payment Requests' }),
@@ -1605,11 +1820,20 @@ function nextStepState(entrySheetsData, paymentsData) {
     };
   }
 
-  if (currentWeekPayment(payments, week.weekId)) {
+  const activePayment = currentWeekPayment(payments, week.weekId);
+  if (activePayment) {
+    if (String(activePayment.status || '').trim().toLowerCase() === 'approved') {
+      return {
+        heading: 'SEND YOUR PAYMENT 💵',
+        body: 'Your request was approved. Open Payments to see where to send your payment.',
+        buttonLabel: 'SEND PAYMENT NOW',
+        route: 'player-payments',
+      };
+    }
     return {
-      heading: 'PAYMENT PENDING \u23F3',
-      body: 'Your payment request has been sent. You can make picks after your entry is approved and marked paid.',
-      buttonLabel: 'VIEW PAYMENTS',
+      heading: 'WAITING FOR MANAGER APPROVAL ⏳',
+      body: 'Your payment request was sent. Do not send payment yet. Open Payments after it is approved.',
+      buttonLabel: 'VIEW PAYMENT STATUS',
       route: 'player-payments',
       secondary: true,
     };
