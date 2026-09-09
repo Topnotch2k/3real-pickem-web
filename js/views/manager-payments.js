@@ -96,6 +96,7 @@ function paymentStatusLabel(status) {
     approved: 'Awaiting Payment',
     paid: 'Paid',
     rejected: 'Rejected',
+    cancelled: 'Cancelled',
   }[status] || 'Unknown';
 }
 
@@ -105,6 +106,7 @@ function emptyMessageForStatus(status) {
     approved: 'No approved payment requests awaiting payment.',
     paid: 'No paid payment requests.',
     rejected: 'No rejected payment requests.',
+    cancelled: 'No cancelled payment requests.',
     all: 'No payment requests yet.',
   }[status] || 'No payment requests yet.';
 }
@@ -116,12 +118,21 @@ function shouldRefreshAfterMutationError(error) {
     'APPROVAL_RESPONSE_INCOMPLETE',
     'MARK_PAID_RESPONSE_INCOMPLETE',
     'REJECTION_RESPONSE_INCOMPLETE',
+    'CANCEL_RESPONSE_INCOMPLETE',
     'CHANGE_METHOD_RESPONSE_INCOMPLETE',
     'PAYMENT_ALREADY_APPROVED',
     'PAYMENT_ALREADY_REJECTED',
     'PAYMENT_STATUS_INVALID',
     'PAYMENT_STATUS_REVIEW_REQUIRED',
   ].indexOf(error && error.code) !== -1;
+}
+
+function incompleteCancelResponseError() {
+  const error = new Error('Payment cancellation may have completed, but the response was incomplete.');
+  error.code = 'CANCEL_RESPONSE_INCOMPLETE';
+  error.reconciledMessage = 'Payment cancellation may have completed, but the payment list was refreshed to confirm its status.';
+  error.refreshFailedMessage = 'Payment cancellation may have completed, but the response was incomplete and the payment list could not refresh.';
+  return error;
 }
 
 function incompleteMarkPaidResponseError() {
@@ -281,6 +292,7 @@ export function createManagerPaymentsView() {
     ['approved', 'Awaiting Payment'],
     ['paid', 'Paid'],
     ['rejected', 'Rejected'],
+    ['cancelled', 'Cancelled'],
     ['all', 'All'],
   ].forEach(([value, label]) => {
     statusSelect.appendChild(createElement('option', { text: label, attributes: { value } }));
@@ -448,6 +460,9 @@ export function createManagerPaymentsView() {
     if (payment.status === 'rejected') {
       rows.push(['Rejected', formatDate(payment.rejectedAt)]);
     }
+    if (payment.status === 'cancelled') {
+      rows.push(['Cancelled', formatDate(payment.updatedAt)]);
+    }
     rows.forEach(([label, value]) => {
       meta.appendChild(createElement('dt', { text: label }));
       meta.appendChild(createElement('dd', { text: value }));
@@ -475,10 +490,12 @@ export function createManagerPaymentsView() {
     const actions = createElement('div', { className: 'button-row' });
     const approve = createElement('button', { className: 'primary-button', text: 'Approve Request', attributes: { type: 'button' } });
     const reject = createElement('button', { className: 'secondary-button', text: 'Reject Request', attributes: { type: 'button' } });
+    const cancel = createElement('button', { className: 'secondary-button', text: 'Cancel Payment Request', attributes: { type: 'button' } });
     const mutationStatus = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
     const setDisabled = (disabled) => {
       approve.disabled = disabled;
       reject.disabled = disabled;
+      cancel.disabled = disabled;
     };
     setDisabled(inFlightPaymentIds.has(payment.paymentId) || blockedPaymentIds.has(payment.paymentId));
     approve.addEventListener('click', () => approvePayment(payment, mutationStatus, setDisabled));
@@ -489,7 +506,8 @@ export function createManagerPaymentsView() {
       rejectingPaymentId = payment.paymentId;
       renderPayments();
     });
-    appendChildren(actions, [approve, reject]);
+    cancel.addEventListener('click', () => cancelPayment(payment, mutationStatus, setDisabled));
+    appendChildren(actions, [approve, reject, cancel]);
     appendChildren(region, [actions, mutationStatus]);
     return region;
   }
@@ -506,11 +524,13 @@ export function createManagerPaymentsView() {
     const updateMethod = createElement('button', { className: 'secondary-button', text: 'Update Method', attributes: { type: 'submit' } });
     const actions = createElement('div', { className: 'button-row' });
     const markPaid = createElement('button', { className: 'primary-button', text: 'Mark Paid', attributes: { type: 'button' } });
+    const cancel = createElement('button', { className: 'secondary-button', text: 'Cancel Payment Request', attributes: { type: 'button' } });
     const mutationStatus = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
     const setDisabled = (disabled) => {
       methodSelect.disabled = disabled;
       updateMethod.disabled = disabled;
       markPaid.disabled = disabled;
+      cancel.disabled = disabled;
     };
     setDisabled(inFlightPaymentIds.has(payment.paymentId) || blockedPaymentIds.has(payment.paymentId));
     methodForm.addEventListener('submit', async (event) => {
@@ -518,9 +538,10 @@ export function createManagerPaymentsView() {
       await changePaymentMethod(payment, methodSelect.value, mutationStatus, setDisabled);
     });
     markPaid.addEventListener('click', () => markPaymentPaid(payment, mutationStatus, setDisabled));
+    cancel.addEventListener('click', () => cancelPayment(payment, mutationStatus, setDisabled));
     appendChildren(methodButtons, [updateMethod]);
     appendChildren(methodForm, [createField('Payment method', methodSelect), methodButtons]);
-    appendChildren(actions, [markPaid]);
+    appendChildren(actions, [markPaid, cancel]);
     appendChildren(region, [methodForm, actions, mutationStatus]);
     return region;
   }
@@ -640,6 +661,57 @@ export function createManagerPaymentsView() {
       const entryCount = result.data.entries.length || returnedPayment.entriesCreatedCount || 0;
       const noun = entryCount === 1 ? 'entry was' : 'entries were';
       const successMessage = `Payment marked paid. ${entryCount} ${noun} created or confirmed.`;
+      mutationStatus.textContent = successMessage;
+      applyMutationPayment(payment, returnedPayment, successMessage);
+    } catch (error) {
+      mutationStatus.textContent = error.message;
+      mutationStatus.classList.add('error-text');
+      if (shouldRefreshAfterMutationError(error)) {
+        blockPayment(payment.paymentId, error);
+        const refreshOutcome = await loadPayments({ preserveMessage: true });
+        if (refreshOutcome.status === 'applied') {
+          publishReconciliationNotice(error.reconciledMessage || error.message);
+        } else if (refreshOutcome.status === 'failed') {
+          const refreshFailedMessage = error.refreshFailedMessage || `${error.message} Payment list could not refresh.`;
+          mutationStatus.textContent = refreshFailedMessage;
+          publishReconciliationNotice(refreshFailedMessage);
+        }
+      }
+    } finally {
+      inFlightPaymentIds.delete(payment.paymentId);
+      statusSelect.disabled = inFlightPaymentIds.size > 0;
+      weekSelect.disabled = inFlightPaymentIds.size > 0;
+      const reconciliation = reconcileBlockedPayments();
+      if (reconciliation.changed) {
+        renderPayments();
+      }
+      publishReconciliationNotices(reconciliation.notices);
+      if (!blockedPaymentIds.has(payment.paymentId)) {
+        setDisabled(false);
+      }
+    }
+  }
+
+  async function cancelPayment(payment, mutationStatus, setDisabled) {
+    if (inFlightPaymentIds.has(payment.paymentId) || blockedPaymentIds.has(payment.paymentId)) {
+      return;
+    }
+    const amount = formatMoney(payment.amountDueCents, payment.amountDue);
+    const playerName = payment.player && payment.player.displayName ? payment.player.displayName : 'this player';
+    if (!window.confirm(`Cancel this payment request for ${amount} from ${playerName}? The player will need to submit a new request.`)) {
+      return;
+    }
+
+    inFlightPaymentIds.add(payment.paymentId);
+    statusSelect.disabled = true;
+    weekSelect.disabled = true;
+    setDisabled(true);
+    mutationStatus.classList.remove('error-text');
+    mutationStatus.textContent = 'Cancelling payment request...';
+    try {
+      const result = await managerAction('manager.payment.cancel', { paymentId: payment.paymentId });
+      const returnedPayment = validateMutationPayment(result, payment, 'cancelled', incompleteCancelResponseError);
+      const successMessage = 'Payment request cancelled.';
       mutationStatus.textContent = successMessage;
       applyMutationPayment(payment, returnedPayment, successMessage);
     } catch (error) {

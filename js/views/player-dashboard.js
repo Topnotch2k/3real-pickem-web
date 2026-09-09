@@ -173,6 +173,7 @@ function paymentStatusLabel(status) {
     approved: 'Awaiting Payment',
     paid: 'Paid',
     rejected: 'Rejected',
+    cancelled: 'Cancelled',
   }[status] || String(status || 'Unknown');
 }
 
@@ -772,6 +773,51 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
     return section;
   }
 
+  async function cancelPaymentRequest(payment, status, setDisabled) {
+    if (submitting || !payment || !payment.paymentId) {
+      return;
+    }
+    if (!window.confirm('Cancel this payment request? You will need to submit a new request.')) {
+      return;
+    }
+    submitting = true;
+    status.classList.remove('error-text');
+    status.textContent = 'Cancelling payment request...';
+    setDisabled(true);
+    updateFormAvailability();
+    try {
+      showingPaidRequest = null;
+      showingRejectedRequest = null;
+      dismissedRejectedPaymentId = payment.paymentId || dismissedRejectedPaymentId;
+      await playerAction('player.payment.cancel', {
+        paymentId: payment.paymentId,
+      });
+      status.textContent = 'Payment request cancelled. You can submit a new request.';
+      await loadPayments();
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add('error-text');
+    } finally {
+      submitting = false;
+      setDisabled(false);
+      updateFormAvailability();
+      renderActivePaymentState();
+    }
+  }
+
+  function createCancelPaymentSection(payment) {
+    const section = createElement('section', { className: 'payment-state-method-change' });
+    const cancel = createElement('button', { className: 'secondary-button', text: 'Cancel Payment Request', attributes: { type: 'button' } });
+    const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+    const setDisabled = (disabled) => {
+      cancel.disabled = disabled;
+    };
+    setDisabled(submitting);
+    cancel.addEventListener('click', () => cancelPaymentRequest(payment, status, setDisabled));
+    appendChildren(section, [cancel, status]);
+    return section;
+  }
+
   function renderActivePaymentState() {
     requestCard.replaceChildren();
     activeStateRegion.replaceChildren();
@@ -800,6 +846,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
         ]);
       }
       activeStateRegion.appendChild(createMethodChangeSection(activeRequest));
+      activeStateRegion.appendChild(createCancelPaymentSection(activeRequest));
       appendChildren(requestCard, [activeStateRegion, message]);
       return;
     }
