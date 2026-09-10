@@ -687,11 +687,13 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
 
   function paymentDestinationBlock(payment) {
     const amount = formatMoney(payment.amountDueCents, payment.amountDue);
-    const methodLabel = paymentMethodLabel(payment.method).toUpperCase();
+    const methodLabel = paymentMethodLabel(payment.method);
+    const actionMethodLabel = methodLabel.toUpperCase();
     const block = createElement('section', { className: 'payment-instructions payment-state-destination' });
     if (payment.method === 'cash') {
       appendChildren(block, [
         createElement('p', { className: 'payment-instructions-amount', text: `Pay ${amount} in cash to the manager` }),
+        createElement('p', { className: 'payment-instructions-warning', text: "DO NOT PAY INSIDE 3 REAL PICK'EM" }),
       ]);
       return block;
     }
@@ -715,23 +717,26 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       attributes: { role: 'status', 'aria-live': 'polite' },
     });
     const copy = createElement('button', {
-      className: 'secondary-button payment-instructions-copy',
-      text: 'Copy Payment Destination',
+      className: 'primary-button payment-instructions-copy',
+      text: 'COPY',
       attributes: { type: 'button' },
     });
     copy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(destinationValue);
-        copyStatus.textContent = 'Copied';
+        copy.textContent = 'COPIED ✓';
+        copyStatus.textContent = '';
       } catch (error) {
         copyStatus.textContent = 'Copy failed. Select and copy the destination.';
       }
     });
     appendChildren(block, [
-      createElement('p', { className: 'payment-instructions-amount', text: `Send ${amount} through ${methodLabel}` }),
-      createElement('p', { className: 'payment-instructions-label', text: 'Send to:' }),
+      createElement('p', { className: 'payment-instructions-label', text: methodLabel }),
       createElement('p', { className: 'payment-instructions-destination', text: destinationValue }),
       appendChildren(createElement('div', { className: 'button-row payment-instructions-actions' }), [copy, copyStatus]),
+      createElement('p', { className: 'payment-instructions-next-step', text: `OPEN ${actionMethodLabel} AND SEND ${amount}` }),
+      createElement('p', { className: 'payment-instructions-next-step', text: 'TO THE DESTINATION ABOVE' }),
+      createElement('p', { className: 'payment-instructions-warning', text: "DO NOT PAY INSIDE 3 REAL PICK'EM" }),
     ]);
     return block;
   }
@@ -827,22 +832,24 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
         requestCard.appendChild(message);
       }
       const isApproved = activeRequest.status === 'approved';
-      appendChildren(activeStateRegion, [
-        createElement('p', { className: 'eyebrow', text: isApproved ? 'Request Approved ✅' : 'Request Sent ✅' }),
-        createElement('h2', { text: isApproved ? 'SEND YOUR PAYMENT NOW' : 'WAITING FOR MANAGER APPROVAL' }),
-        createElement('p', {
-          className: 'muted',
-          text: isApproved
-            ? 'Your request was approved. Send your payment using the details below.'
-            : 'Your payment request was sent to the manager. Do not send payment yet. Your payment details will appear after the manager approves your request.',
-        }),
-        paymentSummaryRows(activeRequest),
-      ]);
       if (isApproved) {
+        appendChildren(activeStateRegion, [
+          createElement('p', { className: 'eyebrow', text: 'Payment Approved ✅' }),
+          createElement('h2', { text: `SEND ${formatMoney(activeRequest.amountDueCents, activeRequest.amountDue)} NOW` }),
+        ]);
         activeStateRegion.appendChild(paymentDestinationBlock(activeRequest));
         appendChildren(activeStateRegion, [
-          createElement('p', { className: 'status-pill status-pill-muted', text: 'WAITING FOR PAYMENT CONFIRMATION ⏳' }),
-          createElement('p', { className: 'muted', text: 'After you send your payment, you do not need to press anything else. Stay here or come back later. The manager will confirm your payment after the money is received.' }),
+          createElement('p', { className: 'status-pill status-pill-muted payment-state-waiting', text: 'WAITING FOR MANAGER CONFIRMATION ⏳' }),
+        ]);
+      } else {
+        appendChildren(activeStateRegion, [
+          createElement('p', { className: 'eyebrow', text: 'Request Sent ✅' }),
+          createElement('h2', { text: 'WAITING FOR MANAGER APPROVAL' }),
+          createElement('p', {
+            className: 'muted',
+            text: 'Your payment request was sent to the manager. Do not send payment yet. Your payment details will appear after the manager approves your request.',
+          }),
+          paymentSummaryRows(activeRequest),
         ]);
       }
       activeStateRegion.appendChild(createMethodChangeSection(activeRequest));
