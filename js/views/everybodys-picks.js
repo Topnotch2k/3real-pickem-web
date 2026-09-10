@@ -211,7 +211,7 @@ function renderLeagueLeaders(data) {
   const leaders = data && data.leaders ? data.leaders : {};
   appendChildren(section, [
     renderLeaderCategory('\uD83D\uDC51 Most Wins', leaders.mostWins, (leader) => `${displayValue(leader.weeklyWins)} ${plural(leader.weeklyWins, 'win', 'wins')}`),
-    renderLeaderCategory('\uD83C\uDFAF Best Accuracy', leaders.bestAccuracy, (leader) => formatPercent(leader.accuracy)),
+    renderLeaderCategory('\u2764\uFE0F Most Loyal', leaders.mostLoyal, (leader) => `${displayValue(leader.paidEntryCount)} ${plural(leader.paidEntryCount, 'entry', 'entries')}`),
     renderLeaderCategory('\uD83D\uDCB0 BIGGEST POT WINNERS', leaders.biggestPotWinners, (leader) => formatMoney(leader.totalPrizeWonCents)),
     renderLeaderCategory('\uD83E\uDD1D Top Recruiter', leaders.topRecruiter, (leader) => `${displayValue(leader.registeredRecruitCount)} ${plural(leader.registeredRecruitCount, 'recruit', 'recruits')}`),
   ]);
