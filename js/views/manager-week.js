@@ -134,6 +134,7 @@ function rememberWeekSelection(week) {
 export function createManagerWeekView() {
   let weekData = null;
   let inFlight = false;
+  let weekInputEdited = false;
   const wrapper = createElement('main', { className: 'page-container' });
   const controlsCard = createElement('section', { className: 'state-card manager-toolbar' });
   const detailCard = createElement('section', { className: 'state-card compact-card' });
@@ -158,6 +159,9 @@ export function createManagerWeekView() {
   const backButton = createElement('button', { className: 'secondary-button', text: 'Back to Dashboard', attributes: { type: 'button' } });
   const formButtons = createElement('div', { className: 'button-row' });
   const message = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
+  weekInput.addEventListener('input', () => {
+    weekInputEdited = true;
+  });
 
   function setInFlight(value) {
     inFlight = value;
@@ -188,7 +192,7 @@ export function createManagerWeekView() {
     const week = weekData.week;
     seasonInput.value = String(week.season);
     seasonTypeSelect.value = week.seasonType || 'regular';
-    weekInput.value = String(week.nflWeek);
+    if (!weekInputEdited) weekInput.value = String(week.nflWeek);
     importButton.textContent = 'Refresh Schedule';
     const details = createElement('dl', { className: 'player-meta' });
     [
@@ -518,6 +522,7 @@ export function createManagerWeekView() {
         nflWeek: Number(weekInput.value),
       });
       weekData = result.data;
+      weekInputEdited = false;
       rememberWeekSelection(weekData && weekData.week);
       message.textContent = `Schedule imported. ${result.data.createdGames} games created and ${result.data.updatedGames} games updated.`;
       render();
