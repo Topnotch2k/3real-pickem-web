@@ -192,7 +192,10 @@ export function createManagerWeekView() {
     const week = weekData.week;
     seasonInput.value = String(week.season);
     seasonTypeSelect.value = week.seasonType || 'regular';
-    if (!weekInputEdited) weekInput.value = String(week.nflWeek);
+    if (!weekInputEdited) {
+      const defaultNflWeek = week.status === 'archived' ? Math.min(week.nflWeek + 1, 25) : week.nflWeek;
+      weekInput.value = String(defaultNflWeek);
+    }
     importButton.textContent = 'Refresh Schedule';
     const details = createElement('dl', { className: 'player-meta' });
     [
