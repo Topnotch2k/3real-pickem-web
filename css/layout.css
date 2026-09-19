@@ -1581,7 +1581,13 @@ thead .picks-board-sticky {
 }
 
 .competitive-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background-image: url('../assets/3real-goat.png');
+  background-repeat: no-repeat;
   background-position: center 40%;
   background-size: min(90vw, 38rem) auto;
   opacity: 0.08;
