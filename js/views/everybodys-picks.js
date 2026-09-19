@@ -1,5 +1,5 @@
 import { getManagerSessionToken } from '../auth.js?v=20260816-1';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260816-1';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260919-14';
 import { requestAction } from '../api.js?v=20260816-1';
 import { navigateTo } from '../router.js?v=20260816-1';
 import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260919-6';
@@ -27,6 +27,7 @@ function actorConfig(actor) {
   return actor === 'manager'
     ? {
         action: 'manager.week.picksBoard',
+        historyAction: 'manager.goat.history',
         token: getManagerSessionToken,
         backRoute: 'manager-dashboard',
         backText: 'Back to Manager Dashboard',
@@ -34,6 +35,7 @@ function actorConfig(actor) {
       }
     : {
         action: 'player.week.picksBoard',
+        historyAction: 'player.goat.history',
         token: getPlayerSessionToken,
         backRoute: 'player-dashboard',
         backText: 'Back to Player Dashboard',
@@ -379,8 +381,20 @@ function renderGoatLeaderboard(goatSummary) {
   appendChildren(section, [
     createElement('p', { className: 'eyebrow', text: 'CURRENT GOAT' }),
     createElement('h3', { text: `🐐 ${goatSummary.playerName || 'Unknown player'}` }),
-    createElement('p', { className: 'muted', text: `${displayValue(goatSummary.goatPoints)} Core 5 category wins` }),
+    createElement('p', { className: 'muted', text: `${displayValue(goatSummary.goatPoints)} OF ${displayValue(goatSummary.categoryCount || 5)} CATEGORIES` }),
   ]);
+  if (goatSummary.closestChallenger) {
+    const challenger = goatSummary.closestChallenger,
+      gap = Number(challenger.pointsBehind);
+    section.appendChild(createElement('p', {
+      className: 'goat-challenger',
+      text: `${challenger.playerName || 'Closest challenger'} — ${challenger.tiedOnPointsButLostTieBreak ? 'TIED ON CATEGORIES — BEHIND ON TIE-BREAK' : `${gap} ${gap === 1 ? 'CATEGORY' : 'CATEGORIES'} AWAY`}`,
+    }));
+  }
+  const movement = goatSummary.movement;
+  if (movement?.eventTypes?.length) {
+    section.appendChild(createElement('p', { className: 'muted goat-movement', text: movement.eventTypes.join(' · ').replaceAll('_', ' ').toUpperCase() }));
+  }
   const categories = createElement('div', { className: 'goat-category-list' });
   Object.entries(GOAT_CATEGORY_LABELS).forEach(([key, label]) => {
     const category = goatSummary.categories && goatSummary.categories[key];
@@ -583,6 +597,14 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
       const result = await requestAction(config.action, actionPayload(weekId));
       if (currentVersion !== loadVersion || !wrapper.isConnected) return;
       boardData = result.data || {};
+      try {
+        const history = await requestAction(config.historyAction, actionPayload());
+        if (history.data?.latest && boardData.goatSummary) {
+          boardData.goatSummary = { ...boardData.goatSummary, ...history.data.latest };
+        }
+      } catch {
+        // Goat history is optional until the physical sheet is provisioned.
+      }
       activeLeaderboardTab = hasLoadedBoard ? 'weekly' : activeLeaderboardTab;
       hasLoadedBoard = true;
       message.textContent = '';

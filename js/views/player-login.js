@@ -1,4 +1,4 @@
-import { loginPlayer } from '../player-auth.js?v=20260816-1';
+import { loginPlayer } from '../player-auth.js?v=20260919-14';
 import { navigateTo } from '../router.js?v=20260816-1';
 
 function createElement(tagName, options = {}) {

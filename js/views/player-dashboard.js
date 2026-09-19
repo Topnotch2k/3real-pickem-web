@@ -1,4 +1,4 @@
-import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260816-1';
+import { getPlayerLoginSessionMarker, getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260919-14';
 import { requestAction } from '../api.js?v=20260816-1';
 import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260816-1';
 import { navigateTo } from '../router.js?v=20260816-1';
@@ -46,22 +46,21 @@ async function playerDashboardBootstrapSection(bootstrapRequest, sectionName) {
   return section.data;
 }
 
-const GOAT_SPLASH_STORAGE_PREFIX = '3real_pickem_goat_splash_views:';
+const GOAT_SPLASH_STORAGE_PREFIX = '3real_pickem_goat_splash_seen:';
 
-function goatSplashViewCount(playerId, weekId) {
+function goatSplashSeen(playerId) {
   try {
-    const count = Number.parseInt(window.localStorage.getItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`) || '0', 10);
-    return Number.isFinite(count) && count >= 0 ? count : 0;
+    const marker = getPlayerLoginSessionMarker();
+    return Boolean(marker && window.sessionStorage.getItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${marker}`) === '1');
   } catch {
-    return 0;
+    return false;
   }
 }
 
-function incrementGoatSplashViewCount(playerId, weekId) {
+function markGoatSplashSeen(playerId) {
   try {
-    const key = `${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`;
-    const count = goatSplashViewCount(playerId, weekId);
-    window.localStorage.setItem(key, String(count + 1));
+    const marker = getPlayerLoginSessionMarker();
+    if (marker) window.sessionStorage.setItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${marker}`, '1');
   } catch {
     // Storage failure should not block the dashboard or splash.
   }
@@ -82,17 +81,26 @@ function createGoatSplash(goatSummary, onClose) {
     className: 'goat-splash-image',
     attributes: { src: './assets/3real-goat.png', alt: '3 Real Pick’em GOAT', decoding: 'async' },
   });
+  const eventTypes = goatSummary?.movement?.eventTypes || [];
   const crowned = Boolean(goatSummary);
+  const titleText = eventTypes.includes('new_goat_crowned')
+    ? 'NEW GOAT CROWNED'
+    : eventTypes.includes('goat_race_tightened')
+      ? 'GOAT RACE TIGHTENED'
+      : eventTypes.includes('goat_defended')
+        ? 'THE GOAT SURVIVES ANOTHER WEEK'
+        : crowned ? 'THE GOAT HAS BEEN CROWNED' : 'WHO WILL BE CROWNED?';
+  const messageText = crowned
+    ? `${goatSummary.playerName || 'The race is on.'}${goatSummary.closestChallenger?.pointsBehind === 1 ? ' — 1 CATEGORY AWAY' : ''}`
+    : 'THE GOAT RACE BEGINS AFTER 3 GRADED WEEKS';
   const title = createElement('h2', {
     className: 'goat-splash-title',
-    text: crowned ? 'THE GOAT HAS BEEN CROWNED' : 'WHO WILL BE CROWNED?',
+    text: titleText,
     attributes: { id: 'goat-splash-title' },
   });
   const message = createElement('p', {
     className: 'goat-splash-message',
-    text: crowned
-      ? goatSummary.playerName || 'The race is on.'
-      : 'THE GOAT RACE BEGINS AFTER 3 GRADED WEEKS',
+    text: messageText,
   });
   const seeRace = createElement('button', {
     className: 'primary-button goat-splash-cta',
@@ -115,13 +123,20 @@ async function loadGoatSplash(wrapper, player, bootstrapRequest) {
   try {
     const entrySheets = await playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets');
     const weekId = String(entrySheets.week && entrySheets.week.weekId || '').trim();
-    if (!weekId || goatSplashViewCount(playerId, weekId) >= 2 || !wrapper.isConnected) return;
+    if (!weekId || goatSplashSeen(playerId) || !wrapper.isConnected) return;
     const result = await playerAction('player.week.picksBoard', { weekId });
     if (!wrapper.isConnected) return;
     if (!result.data || !Object.prototype.hasOwnProperty.call(result.data, 'goatSummary')) return;
-    const splash = createGoatSplash(result.data.goatSummary, () => splash.remove());
+    let goatSummary = result.data.goatSummary;
+    try {
+      const history = await playerAction('player.goat.history');
+      if (history.data?.latest && goatSummary) goatSummary = { ...goatSummary, ...history.data.latest };
+    } catch {
+      // History is optional until the GoatHistory sheet is provisioned.
+    }
+    const splash = createGoatSplash(goatSummary, () => splash.remove());
     wrapper.appendChild(splash);
-    incrementGoatSplashViewCount(playerId, weekId);
+    markGoatSplashSeen(playerId);
     splash.querySelector('.goat-splash-close')?.focus();
   } catch {
     // A failed GOAT read must never interrupt the dashboard.
