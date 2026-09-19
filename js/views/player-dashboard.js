@@ -1664,6 +1664,7 @@ export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}
   function render() {
     card.replaceChildren();
     actions.replaceChildren();
+    form.remove();
     toggle.textContent = unreadCount > 0 ? `Messages (${unreadCount} unread)` : 'Messages';
     onUnreadChange(unreadCount);
     actions.appendChild(toggle);
@@ -1685,6 +1686,8 @@ export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}
       detail.hidden = !expanded;
       button.setAttribute('aria-expanded', String(expanded));
       item.classList.toggle('is-expanded', expanded);
+      form.remove();
+      if (expanded) item.appendChild(form);
       if (expanded && message.senderRole === 'manager' && !message.readByPlayerAt) {
         try {
           await playerAction('player.messages.markReadOne', { messageId: message.messageId });
@@ -1711,7 +1714,7 @@ export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}
         status.classList.add('error-text');
       }
     }));
-    appendChildren(card, [thread, form]);
+    card.appendChild(thread);
   }
 
   async function load() {
