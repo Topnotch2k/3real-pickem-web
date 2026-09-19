@@ -119,6 +119,15 @@ export function createPlayerEntryPicksView() {
     className: 'status-pill',
     text: 'WEEK',
   });
+  const entrySwitcher = createElement('div', {
+    className: 'form-field entry-sheet-switcher',
+    attributes: { hidden: 'hidden' },
+  });
+  const entrySelect = createElement('select', {
+    attributes: { 'aria-label': 'Entry sheet' },
+  });
+  entrySwitcher.appendChild(createElement('label', { text: 'ENTRY SHEET' }));
+  entrySwitcher.appendChild(entrySelect);
   const buttons = createElement('div', { className: 'button-row' });
   appendChildren(buttons, [topSave, back, weekBadge]);
   bottomButtons.appendChild(bottomSave);
@@ -126,11 +135,46 @@ export function createPlayerEntryPicksView() {
     createElement('p', { className: 'eyebrow', text: 'Player Picks' }),
     createElement('h1', { text: 'Weekly Pick Sheet' }),
     message,
+    entrySwitcher,
     buttons,
   ]);
   appendChildren(wrapper, [createPlayerNav('player-picks'), header, content]);
 
   back.addEventListener('click', () => navigateTo('player-dashboard'));
+
+  entrySelect.addEventListener('change', () => {
+    const nextEntryId = entrySelect.value;
+    if (!nextEntryId || nextEntryId === entryId) {
+      entrySelect.value = entryId;
+      return;
+    }
+    const dirty = dirtySelections().length > 0 || dirtyPredictedTotal();
+    if (dirty && !window.confirm('You have unsaved picks on this entry. Switch entries and lose those unsaved changes?')) {
+      entrySelect.value = entryId;
+      return;
+    }
+    navigateTo(`player-entry-picks?entryId=${encodeURIComponent(nextEntryId)}`);
+  });
+
+  async function loadEntrySwitcher() {
+    try {
+      const data = (await playerAction('player.week.entrySheets')).data;
+      const entries = data && Array.isArray(data.entries) ? data.entries : [];
+      if (entries.length < 2 || !entries.some((entry) => entry.entryId === entryId)) return;
+      entrySelect.replaceChildren();
+      entries.forEach((entry, index) => {
+        const option = createElement('option', {
+          text: entry.entryLabel || `Entry ${index + 1}`,
+          attributes: { value: entry.entryId },
+        });
+        entrySelect.appendChild(option);
+      });
+      entrySelect.value = entryId;
+      entrySwitcher.hidden = false;
+    } catch {
+      entrySwitcher.hidden = true;
+    }
+  }
 
   function selectedByGameId() {
     const selected = {};
@@ -446,13 +490,15 @@ export function createPlayerEntryPicksView() {
   bottomSave.addEventListener('click', savePicks);
 
   if (entryId) {
-    loadEntryPicks().catch((error) => {
-      if (error.code === 'ENTRY_NOT_AVAILABLE') entryAvailable = false;
-      message.textContent = error.message;
-      message.classList.add('error-text');
-      saveBlocked = true;
-      updateAvailability();
-    });
+    loadEntryPicks()
+      .then(loadEntrySwitcher)
+      .catch((error) => {
+        if (error.code === 'ENTRY_NOT_AVAILABLE') entryAvailable = false;
+        message.textContent = error.message;
+        message.classList.add('error-text');
+        saveBlocked = true;
+        updateAvailability();
+      });
   } else {
     entryAvailable = false;
     saveBlocked = true;

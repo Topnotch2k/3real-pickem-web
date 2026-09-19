@@ -1094,6 +1094,20 @@ h1 {
   max-width: 72rem;
 }
 
+.entry-sheet-switcher {
+  max-width: 22rem;
+  margin-top: var(--space-3);
+}
+
+.entry-sheet-switcher label {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--color-gold-soft);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
 .player-dashboard-card {
   display: grid;
   gap: var(--space-3);
