@@ -197,6 +197,12 @@ function messageTime(value) {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(date);
 }
 
+function messageCompactTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 'numeric' }).format(date);
+}
+
 function messagePreview(body, limit = 100) {
   const normalized = String(body || '').trim().replace(/\s+/g, ' ');
   return normalized.length > limit ? `${normalized.slice(0, limit).trimEnd()}...` : normalized;
@@ -215,17 +221,19 @@ function renderMessageThread(messages, onOpen, onDelete) {
       className: 'message-row-main',
       attributes: { type: 'button', 'aria-expanded': 'false', 'aria-label': `Open ${message.senderRole === 'manager' ? 'manager' : 'your'} message` },
     });
-    const header = createElement('div', { className: 'player-card-header' });
-    appendChildren(header, [
-      createElement('span', {
-        className: `status-pill ${message.senderRole === 'manager' ? '' : 'status-pill-muted'}`,
-        text: message.senderRole === 'manager' ? 'Manager' : 'You',
-      }),
+    const summary = createElement('span', { className: 'message-row-summary' });
+    const unreadDot = createElement('span', { className: 'message-unread-dot', text: unread ? '●' : '', attributes: { 'aria-hidden': 'true' } });
+    const sender = createElement('span', { className: 'message-row-sender', text: message.senderRole === 'manager' ? 'Manager' : 'You' });
+    const preview = createElement('span', { className: 'message-preview', text: messagePreview(message.body) });
+    const compactTime = createElement('time', { className: 'message-row-time muted', text: messageCompactTime(message.createdAt), attributes: { datetime: message.createdAt } });
+    appendChildren(summary, [unreadDot, sender, preview, compactTime]);
+    const detail = createElement('span', { className: 'message-detail', attributes: { hidden: 'hidden' } });
+    appendChildren(detail, [
+      createElement('strong', { text: message.senderRole === 'manager' ? 'Manager' : 'You' }),
       createElement('small', { className: 'muted', text: messageTime(message.createdAt) }),
+      createElement('span', { className: 'message-detail-body', text: message.body || '' }),
     ]);
-    const preview = createElement('p', { className: 'message-preview', text: messagePreview(message.body) });
-    const detail = createElement('p', { className: 'message-detail', text: message.body || '', attributes: { hidden: 'hidden' } });
-    appendChildren(open, [header, preview, detail]);
+    appendChildren(open, [summary, detail]);
     const remove = createElement('button', {
       className: 'message-delete-button',
       text: '×',

@@ -811,9 +811,16 @@ h1 {
 
 .message-row {
   position: relative;
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-2);
+  display: block;
+  min-height: 58px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(217, 173, 50, 0.22);
+  border-radius: 0;
+}
+
+.player-list[aria-label="Messages"] {
+  gap: 0;
 }
 
 .message-row-unread {
@@ -825,13 +832,46 @@ h1 {
 }
 
 .message-row-main {
+  display: block;
   min-width: 0;
-  flex: 1;
+  width: 100%;
+  min-height: 58px;
   border: 0;
   background: transparent;
   color: inherit;
-  padding: 0;
+  padding: 0 48px 0 var(--space-2);
   text-align: left;
+}
+
+.message-row-summary {
+  display: grid;
+  grid-template-columns: 12px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 58px;
+}
+
+.message-unread-dot {
+  min-width: 12px;
+  color: var(--color-gold-soft);
+  font-size: 0.55rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.message-row-sender,
+.message-preview,
+.message-row-time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-row-sender {
+  font-size: 0.86rem;
+  font-weight: 800;
 }
 
 .message-row-main:focus-visible {
@@ -842,7 +882,11 @@ h1 {
 .message-preview,
 .message-detail {
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
+}
+
+.message-preview {
+  display: block;
+  color: var(--color-muted);
 }
 
 .message-row-unread .message-preview {
@@ -854,11 +898,23 @@ h1 {
   display: none;
 }
 
+.message-detail {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0 var(--space-2);
+  white-space: normal;
+}
+
+.message-detail-body {
+  white-space: pre-wrap;
+}
+
 .message-delete-button {
-  flex: 0 0 44px;
   min-width: 44px;
   min-height: 44px;
-  align-self: flex-start;
+  position: absolute;
+  top: 7px;
+  right: 0;
   border: 0;
   background: transparent;
   color: var(--color-muted);
