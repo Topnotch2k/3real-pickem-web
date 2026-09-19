@@ -2,7 +2,7 @@ import { getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=2026081
 import { requestAction } from '../api.js?v=20260816-1';
 import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260816-1';
 import { navigateTo } from '../router.js?v=20260816-1';
-import { createPlayerNav } from '../navigation.js?v=20260816-1';
+import { createPlayerNav } from '../navigation.js?v=20260919-6';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
