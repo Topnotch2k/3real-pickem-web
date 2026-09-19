@@ -10,7 +10,7 @@ import { createManagerMessagesView } from './views/manager-messages.js?v=2026081
 import { createManagerReferralsView } from './views/manager-referrals.js?v=20260816-1';
 import { createPlayerRegisterView } from './views/player-register.js?v=20260816-1';
 import { createPlayerLoginView } from './views/player-login.js?v=20260816-1';
-import { createPlayerDashboardView } from './views/player-dashboard.js?v=20260919-1';
+import { createPlayerDashboardView } from './views/player-dashboard.js?v=20260919-7';
 import { createPlayerPicksView } from './views/player-picks.js?v=20260816-1';
 import { createPlayerMessagesView } from './views/player-messages.js?v=20260816-1';
 import { createPlayerPaymentsView } from './views/player-payments.js?v=20260823-12';
@@ -20,7 +20,7 @@ import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=2026
 import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260919-6';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260919-6';
 
-const APP_DEPLOYMENT_VERSION = '20260919-6';
+const APP_DEPLOYMENT_VERSION = '20260919-7';
 const UPDATE_TARGET_STORAGE_KEY = '3real-pickem-update-target';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 let updateCheckPromise = null;

@@ -197,14 +197,24 @@ function messageTime(value) {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(date);
 }
 
-function renderMessageThread(messages) {
+function messagePreview(body, limit = 100) {
+  const normalized = String(body || '').trim().replace(/\s+/g, ' ');
+  return normalized.length > limit ? `${normalized.slice(0, limit).trimEnd()}...` : normalized;
+}
+
+function renderMessageThread(messages, onOpen, onDelete) {
   const list = createElement('section', { className: 'player-list', attributes: { 'aria-label': 'Messages' } });
   if (!messages.length) {
     list.appendChild(createElement('p', { className: 'muted', text: 'No messages yet.' }));
     return list;
   }
   messages.forEach((message) => {
-    const item = createElement('article', { className: 'player-card compact-card' });
+    const unread = message.senderRole === 'manager' && !message.readByPlayerAt;
+    const item = createElement('article', { className: `player-card compact-card message-row ${unread ? 'message-row-unread' : 'message-row-read'}` });
+    const open = createElement('button', {
+      className: 'message-row-main',
+      attributes: { type: 'button', 'aria-expanded': 'false', 'aria-label': `Open ${message.senderRole === 'manager' ? 'manager' : 'your'} message` },
+    });
     const header = createElement('div', { className: 'player-card-header' });
     appendChildren(header, [
       createElement('span', {
@@ -213,7 +223,23 @@ function renderMessageThread(messages) {
       }),
       createElement('small', { className: 'muted', text: messageTime(message.createdAt) }),
     ]);
-    appendChildren(item, [header, createElement('p', { text: message.body || '' })]);
+    const preview = createElement('p', { className: 'message-preview', text: messagePreview(message.body) });
+    const detail = createElement('p', { className: 'message-detail', text: message.body || '', attributes: { hidden: 'hidden' } });
+    appendChildren(open, [header, preview, detail]);
+    const remove = createElement('button', {
+      className: 'message-delete-button',
+      text: '×',
+      attributes: { type: 'button', 'aria-label': 'Delete message' },
+    });
+    remove.addEventListener('click', (event) => {
+      event.stopPropagation();
+      onDelete(message, item);
+    });
+    open.addEventListener('click', () => {
+      const expanded = detail.hidden;
+      onOpen(message, expanded, item, open, detail);
+    });
+    appendChildren(item, [open, remove]);
     list.appendChild(item);
   });
   return list;
@@ -1615,6 +1641,7 @@ export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}
   let messages = [];
   let unreadCount = 0;
   let open = Boolean(options.open);
+  let expandedMessageId = '';
   const card = createElement('section', { className: 'state-card compact-card' });
   const status = createElement('p', { className: 'muted', attributes: { role: 'status', 'aria-live': 'polite' } });
   const thread = createElement('section');
@@ -1639,21 +1666,53 @@ export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}
       status,
     ]);
     if (!open) return;
-    thread.replaceChildren(renderMessageThread(messages));
+    thread.replaceChildren(renderMessageThread(messages, async (message, expanded, item, button, detail) => {
+      document.querySelectorAll('.message-detail:not([hidden])').forEach((node) => {
+        if (node !== detail) node.hidden = true;
+      });
+      document.querySelectorAll('.message-row.is-expanded').forEach((node) => {
+        if (node !== item) node.classList.remove('is-expanded');
+      });
+      expandedMessageId = expanded ? message.messageId : '';
+      detail.hidden = !expanded;
+      button.setAttribute('aria-expanded', String(expanded));
+      item.classList.toggle('is-expanded', expanded);
+      if (expanded && message.senderRole === 'manager' && !message.readByPlayerAt) {
+        try {
+          await playerAction('player.messages.markReadOne', { messageId: message.messageId });
+          message.readByPlayerAt = new Date().toISOString();
+          unreadCount = Math.max(0, unreadCount - 1);
+          item.classList.remove('message-row-unread');
+          item.classList.add('message-row-read');
+          onUnreadChange(unreadCount);
+        } catch (error) {
+          status.textContent = error.message;
+          status.classList.add('error-text');
+        }
+      }
+    }, async (message, item) => {
+      if (!window.confirm('Delete this message?')) return;
+      try {
+        await playerAction('player.messages.delete', { messageId: message.messageId });
+        messages = messages.filter((candidate) => candidate.messageId !== message.messageId);
+        if (expandedMessageId === message.messageId) expandedMessageId = '';
+        if (message.senderRole === 'manager' && !message.readByPlayerAt) unreadCount = Math.max(0, unreadCount - 1);
+        render();
+      } catch (error) {
+        status.textContent = error.message;
+        status.classList.add('error-text');
+      }
+    }));
     appendChildren(card, [thread, form]);
   }
 
-  async function load(markRead = false) {
+  async function load() {
     status.textContent = 'Loading messages...';
     status.classList.remove('error-text');
     try {
       const result = await playerAction('player.messages.list');
       messages = result.data.messages || [];
       unreadCount = Number(result.data.unreadManagerMessageCount || 0);
-      if (markRead) {
-        await playerAction('player.messages.markRead');
-        unreadCount = 0;
-      }
       status.textContent = '';
       render();
     } catch (error) {
@@ -1665,7 +1724,7 @@ export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}
   toggle.addEventListener('click', () => {
     open = !open;
     render();
-    if (open) load(true);
+    if (open) load();
   });
 
   form.addEventListener('submit', async (event) => {
@@ -1693,7 +1752,7 @@ export function createPlayerMessagesCard(onUnreadChange = () => {}, options = {}
   card.openMessages = () => {
     open = true;
     render();
-    load(true);
+    load();
     card.scrollIntoView({ block: 'start' });
   };
   card.refreshMessages = () => load(false);

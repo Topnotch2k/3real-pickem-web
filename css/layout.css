@@ -809,6 +809,68 @@ h1 {
   color: var(--color-muted);
 }
 
+.message-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.message-row-unread {
+  background: linear-gradient(180deg, rgba(35, 48, 29, 0.98), rgba(12, 18, 11, 0.98));
+}
+
+.message-row-read {
+  opacity: 0.78;
+}
+
+.message-row-main {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.message-row-main:focus-visible {
+  outline: 2px solid var(--color-gold-soft);
+  outline-offset: 2px;
+}
+
+.message-preview,
+.message-detail {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.message-row-unread .message-preview {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.message-detail[hidden] {
+  display: none;
+}
+
+.message-delete-button {
+  flex: 0 0 44px;
+  min-width: 44px;
+  min-height: 44px;
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.message-delete-button:hover,
+.message-delete-button:focus-visible {
+  color: var(--color-gold-soft);
+}
+
 .registered-players-card,
 .registered-players-list,
 .registered-player-card,
