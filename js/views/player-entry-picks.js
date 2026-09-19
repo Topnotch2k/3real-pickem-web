@@ -102,7 +102,7 @@ export function createPlayerEntryPicksView() {
   let saveBlocked = false;
   let entryAvailable = Boolean(entryId);
 
-  const wrapper = createElement('main', { className: 'page-container pick-sheet-page' });
+  const wrapper = createElement('main', { className: 'page-container player-page pick-sheet-page' });
   const header = createElement('section', { className: 'state-card' });
   const content = createElement('section', { className: 'pick-game-list', attributes: { 'aria-label': 'Weekly games' } });
   const message = createElement('p', {

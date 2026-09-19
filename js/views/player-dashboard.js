@@ -738,7 +738,7 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
       }
       appendChildren(card, [
         createElement('span', {
-          className: `status-pill ${payment.status === 'paid' ? '' : 'status-pill-muted'}`,
+          className: `status-pill ${payment.status === 'paid' ? 'status-pill-success' : payment.status === 'rejected' ? 'status-pill-danger' : 'status-pill-muted'}`,
           text: paymentStatusLabel(payment.status),
         }),
         details,
@@ -981,6 +981,16 @@ export function createPaymentWorkspace(bootstrapRequest, options = {}) {
         appendChildren(createElement('div', { className: 'button-row' }), [startNew]),
       ]);
       appendChildren(requestCard, [activeStateRegion, message]);
+      return;
+    }
+
+    if (paymentOptions && !paymentOptions.week) {
+      appendChildren(requestCard, [
+        createElement('p', { className: 'eyebrow', text: 'Entries' }),
+        createElement('h2', { className: 'payment-closed-state-title', text: 'ENTRY PURCHASES CLOSED' }),
+        createElement('p', { className: 'status-pill status-pill-danger', text: 'Closed / unavailable' }),
+        createElement('p', { className: 'muted', text: 'No current week is open for entry purchases.' }),
+      ]);
       return;
     }
 
@@ -1447,11 +1457,11 @@ export function createEntrySheetsCard(bootstrapRequest) {
       appendChildren(header, [
         createElement('h3', { text: entry.entryLabel || 'Entry' }),
         createElement('span', {
-          className: `status-pill ${entry.status === 'active' ? '' : 'status-pill-muted'}`,
+          className: `status-pill ${entry.status === 'active' ? 'status-pill-current' : 'status-pill-muted'}`,
           text: entry.status === 'active' ? 'Active' : 'Unknown',
         }),
         createElement('span', {
-          className: `status-pill ${entry.complete ? '' : 'status-pill-muted'}`,
+          className: `status-pill ${entry.complete ? 'status-pill-success' : 'status-pill-muted'}`,
           text: entry.complete ? 'Complete' : 'In progress',
         }),
       ]);
@@ -2062,7 +2072,7 @@ function createHowToPlayCard() {
 
 export function createPlayerDashboardView(context = {}) {
   const player = context.player || {};
-  const wrapper = createElement('main', { className: 'page-container' });
+  const wrapper = createElement('main', { className: 'page-container player-dashboard-page' });
   const card = createElement('section', { className: 'state-card compact-card player-dashboard-card' });
   const summary = createElement('div', { className: 'player-dashboard-summary' });
   const summaryIntro = createElement('div', { className: 'player-dashboard-summary-intro' });

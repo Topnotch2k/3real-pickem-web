@@ -256,7 +256,7 @@ function fireWeeklyResultsConfetti(weekId) {
 }
 
 export function createWeeklyResultsView() {
-  const wrapper = createElement('main', { className: 'page-container' });
+  const wrapper = createElement('main', { className: 'page-container player-page competitive-page' });
   const card = createElement('section', { className: 'state-card weekly-results-shell' });
   const status = createElement('p', { className: 'muted', text: 'Loading Weekly Results...', attributes: { role: 'status', 'aria-live': 'polite' } });
   const title = createElement('h1', { text: 'Weekly Results' });

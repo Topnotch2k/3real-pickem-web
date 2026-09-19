@@ -473,7 +473,7 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
   let hasLoadedBoard = false;
   const initialGoatDeepLink = initialTab === 'goat';
   let didInitialGoatScroll = false;
-  const wrapper = createElement('main', { className: 'page-container' });
+  const wrapper = createElement('main', { className: actor === 'player' ? 'page-container player-page competitive-page' : 'page-container' });
   const header = createElement('section', { className: 'state-card manager-toolbar' });
   const identityRow = createElement('div', { className: 'everybodys-picks-identity' });
   const logo = createElement('img', {
