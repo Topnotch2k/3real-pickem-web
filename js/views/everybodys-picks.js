@@ -358,6 +358,43 @@ function renderAllTimeLeaderboard(allTime) {
   );
 }
 
+const GOAT_CATEGORY_LABELS = {
+  weeklyWins: 'WEEKLY WINS',
+  accuracy: 'ACCURACY',
+  totalCorrect: 'TOTAL CORRECT',
+  bestWeek: 'BEST WEEK',
+  gradedWeeksPlayed: 'GRADED WEEKS',
+};
+
+function renderGoatLeaderboard(goatSummary) {
+  const section = createElement('div', { className: 'goat-leaderboard' });
+  if (!goatSummary) {
+    section.appendChild(createElement('p', { className: 'muted', text: 'The GOAT race begins after 3 graded Weeks.' }));
+    return section;
+  }
+  appendChildren(section, [
+    createElement('p', { className: 'eyebrow', text: 'CURRENT GOAT' }),
+    createElement('h3', { text: `🐐 ${goatSummary.playerName || 'Unknown player'}` }),
+    createElement('p', { className: 'muted', text: `${displayValue(goatSummary.goatPoints)} Core 5 category wins` }),
+  ]);
+  const categories = createElement('div', { className: 'goat-category-list' });
+  Object.entries(GOAT_CATEGORY_LABELS).forEach(([key, label]) => {
+    const category = goatSummary.categories && goatSummary.categories[key];
+    if (!category) return;
+    const value = key === 'accuracy' ? formatPercent(category.value) : displayValue(category.value);
+    const leaders = Array.isArray(category.leaders) ? category.leaders.map((leader) => leader.playerName || 'Unknown player').join(', ') : '';
+    const item = createElement('section', { className: 'goat-category' });
+    appendChildren(item, [
+      createElement('h4', { text: label }),
+      createElement('strong', { text: value }),
+      createElement('p', { className: 'muted', text: leaders }),
+    ]);
+    categories.appendChild(item);
+  });
+  section.appendChild(categories);
+  return section;
+}
+
 function renderLeaderboard(data, activeTab, setActiveTab) {
   const section = createElement('section', { className: 'state-card leaderboard-section' });
   appendChildren(section, [createElement('h2', { text: 'Leaderboard' })]);
@@ -366,6 +403,7 @@ function renderLeaderboard(data, activeTab, setActiveTab) {
     ['weekly', 'This Week'],
     ['season', 'Season'],
     ['allTime', 'All-Time'],
+    ['goat', 'GOAT'],
   ].forEach(([tab, label]) => {
     const button = createElement('button', {
       className: activeTab === tab ? 'primary-button' : 'secondary-button',
@@ -379,6 +417,7 @@ function renderLeaderboard(data, activeTab, setActiveTab) {
   const leaderboards = data && data.leaderboards ? data.leaderboards : {};
   if (activeTab === 'season') section.appendChild(renderSeasonLeaderboard(leaderboards.season));
   else if (activeTab === 'allTime') section.appendChild(renderAllTimeLeaderboard(leaderboards.allTime));
+  else if (activeTab === 'goat') section.appendChild(renderGoatLeaderboard(data.goatSummary));
   else section.appendChild(renderWeeklyLeaderboard(leaderboards.weekly));
   return section;
 }
@@ -433,6 +472,18 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
   let activeLeaderboardTab = 'weekly';
   const wrapper = createElement('main', { className: 'page-container' });
   const header = createElement('section', { className: 'state-card manager-toolbar' });
+  const identityRow = createElement('div', { className: 'everybodys-picks-identity' });
+  const logo = createElement('img', {
+    className: 'everybodys-picks-logo',
+    attributes: {
+      src: './assets/brand/3real-pickem-logo.png',
+      alt: '3 Real Pick’em',
+      width: '140',
+      height: '140',
+      decoding: 'async',
+    },
+  });
+  const goatIdentity = createElement('div', { className: 'everybodys-picks-goat', attributes: { hidden: 'hidden' } });
   const controls = createElement('div', { className: 'manager-controls picks-board-controls' });
   const weekSelect = createElement('select', { attributes: { name: 'weekId' } });
   const actions = createElement('div', { className: 'picks-board-actions' });
@@ -467,6 +518,28 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
 
   function render() {
     renderWeekOptions();
+    const goatRow = boardData && boardData.leaderboards && boardData.leaderboards.allTime && boardData.leaderboards.allTime.standings
+      ? boardData.leaderboards.allTime.standings.find((row) => Array.isArray(row.badgeCodes) && row.badgeCodes.includes('goat'))
+      : null;
+    goatIdentity.replaceChildren();
+    if (goatRow) {
+      goatIdentity.hidden = false;
+      identityRow.classList.add('has-goat');
+      appendChildren(goatIdentity, [
+        createElement('img', {
+          className: 'everybodys-picks-goat-image',
+          attributes: {
+            src: './assets/3real-goat.png',
+            alt: 'Current GOAT',
+            decoding: 'async',
+          },
+        }),
+        createElement('span', { className: 'everybodys-picks-goat-name', text: goatRow.playerName || 'Unknown player' }),
+      ]);
+    } else {
+      goatIdentity.hidden = true;
+      identityRow.classList.remove('has-goat');
+    }
     actions.replaceChildren();
     const resultsBanner = renderWeeklyResultsBanner(boardData || {}, config);
     if (resultsBanner) actions.appendChild(resultsBanner);
@@ -518,18 +591,10 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
     createField('Week', weekSelect),
     actions,
   ]);
+  appendChildren(identityRow, [logo, goatIdentity]);
   appendChildren(header, [
     createElement('p', { className: 'eyebrow', text: 'Picks' }),
-    createElement('img', {
-      className: 'everybodys-picks-logo',
-      attributes: {
-        src: './assets/brand/3real-pickem-logo.png',
-        alt: '3 Real Pick’em',
-        width: '140',
-        height: '140',
-        decoding: 'async',
-      },
-    }),
+    identityRow,
     createElement('h1', { text: 'Everybody\'s Picks' }),
     controls,
     message,

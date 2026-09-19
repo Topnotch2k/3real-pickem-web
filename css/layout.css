@@ -210,6 +210,45 @@ h1 {
   object-fit: contain;
 }
 
+.everybodys-picks-identity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.everybodys-picks-identity.has-goat {
+  justify-content: space-between;
+}
+
+.everybodys-picks-goat {
+  display: grid;
+  justify-items: center;
+  min-width: clamp(4.75rem, 24vw, 8.75rem);
+  max-width: 42%;
+  text-align: center;
+}
+
+.everybodys-picks-goat[hidden] {
+  display: none;
+}
+
+.everybodys-picks-goat-image {
+  display: block;
+  width: clamp(5.5rem, 28vw, 8.75rem);
+  max-width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.everybodys-picks-goat-name {
+  max-width: 100%;
+  color: var(--color-gold-soft);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
 .picks-board-pot {
   display: grid;
   gap: var(--space-1);
@@ -1122,6 +1161,44 @@ h1 {
 .leaderboard-section {
   display: grid;
   gap: var(--space-2);
+}
+
+.goat-leaderboard {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.goat-leaderboard h3,
+.goat-leaderboard p {
+  margin: 0;
+}
+
+.goat-category-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.goat-category {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid rgba(217, 173, 50, 0.34);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.goat-category h4,
+.goat-category p {
+  margin: 0;
+}
+
+.goat-category h4 {
+  color: var(--color-gold-soft);
+  font-size: 0.78rem;
+}
+
+.goat-category strong {
+  font-size: 1.2rem;
 }
 
 .leaderboard-scroll {

@@ -17,7 +17,7 @@ import { createPlayerPaymentsView } from './views/player-payments.js?v=20260823-
 import { createPlayerReferralsView } from './views/player-referrals.js?v=20260816-1';
 import { createPlayerHelpView } from './views/player-help.js?v=20260816-1';
 import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=20260816-1';
-import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260918-1';
+import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260918-2';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260823-4';
 
 const APP_DEPLOYMENT_VERSION = '20260823-14';
