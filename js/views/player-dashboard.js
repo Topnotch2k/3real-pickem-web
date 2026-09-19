@@ -46,6 +46,85 @@ async function playerDashboardBootstrapSection(bootstrapRequest, sectionName) {
   return section.data;
 }
 
+const GOAT_SPLASH_STORAGE_PREFIX = '3real_pickem_goat_splash_seen:';
+
+function goatSplashWasSeen(playerId, weekId) {
+  try {
+    return window.localStorage.getItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function markGoatSplashSeen(playerId, weekId) {
+  try {
+    window.localStorage.setItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`, '1');
+  } catch {
+    // Storage failure should not block the dashboard or splash.
+  }
+}
+
+function createGoatSplash(goatSummary, onClose) {
+  const overlay = createElement('div', {
+    className: 'goat-splash-overlay',
+    attributes: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'goat-splash-title' },
+  });
+  const panel = createElement('section', { className: 'goat-splash-panel' });
+  const close = createElement('button', {
+    className: 'goat-splash-close',
+    text: '×',
+    attributes: { type: 'button', 'aria-label': 'Close GOAT announcement' },
+  });
+  const image = createElement('img', {
+    className: 'goat-splash-image',
+    attributes: { src: './assets/3real-goat.png', alt: '3 Real Pick’em GOAT', decoding: 'async' },
+  });
+  const crowned = Boolean(goatSummary);
+  const title = createElement('h2', {
+    className: 'goat-splash-title',
+    text: crowned ? 'THE GOAT HAS BEEN CROWNED' : 'WHO WILL BE CROWNED?',
+    attributes: { id: 'goat-splash-title' },
+  });
+  const message = createElement('p', {
+    className: 'goat-splash-message',
+    text: crowned
+      ? goatSummary.playerName || 'The race is on.'
+      : 'THE GOAT RACE BEGINS AFTER 3 GRADED WEEKS',
+  });
+  const seeRace = createElement('button', {
+    className: 'primary-button goat-splash-cta',
+    text: 'SEE THE GOAT RACE',
+    attributes: { type: 'button' },
+  });
+  close.addEventListener('click', onClose);
+  seeRace.addEventListener('click', () => {
+    onClose();
+    navigateTo('player-everybodys-picks?tab=goat');
+  });
+  appendChildren(panel, [close, image, title, message, seeRace]);
+  overlay.appendChild(panel);
+  return overlay;
+}
+
+async function loadGoatSplash(wrapper, player, bootstrapRequest) {
+  const playerId = String(player.playerId || '').trim();
+  if (!playerId) return;
+  try {
+    const entrySheets = await playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets');
+    const weekId = String(entrySheets.week && entrySheets.week.weekId || '').trim();
+    if (!weekId || goatSplashWasSeen(playerId, weekId) || !wrapper.isConnected) return;
+    const result = await playerAction('player.week.picksBoard', { weekId });
+    if (!wrapper.isConnected) return;
+    if (!result.data || !Object.prototype.hasOwnProperty.call(result.data, 'goatSummary')) return;
+    const splash = createGoatSplash(result.data.goatSummary, () => splash.remove());
+    wrapper.appendChild(splash);
+    markGoatSplashSeen(playerId, weekId);
+    splash.querySelector('.goat-splash-close')?.focus();
+  } catch {
+    // A failed GOAT read must never interrupt the dashboard.
+  }
+}
+
 function createField(labelText, control) {
   const label = createElement('label', { className: 'form-field' });
   label.appendChild(createElement('span', { text: labelText }));
@@ -2058,6 +2137,7 @@ export function createPlayerDashboardView(context = {}) {
     thisWeekHelper,
   ]);
   loadMessageBellCount();
+  loadGoatSplash(wrapper, player, bootstrapRequest);
   return wrapper;
 }
 

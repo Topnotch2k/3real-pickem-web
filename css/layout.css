@@ -846,6 +846,76 @@ h1 {
   gap: var(--space-3);
 }
 
+.goat-splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: rgba(3, 5, 4, 0.9);
+}
+
+.goat-splash-panel {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: min(100%, 30rem);
+  max-height: calc(100vh - var(--space-6));
+  overflow-y: auto;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  border: 1px solid rgba(217, 173, 50, 0.72);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(24, 34, 22, 0.99), rgba(7, 9, 7, 0.99));
+  box-shadow: var(--shadow-panel);
+  text-align: center;
+}
+
+.goat-splash-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid rgba(217, 173, 50, 0.58);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-gold-soft);
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.goat-splash-image {
+  display: block;
+  width: min(72vw, 17rem);
+  max-width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.goat-splash-title,
+.goat-splash-message {
+  margin: 0;
+}
+
+.goat-splash-title {
+  max-width: 16ch;
+  color: var(--color-gold-soft);
+  font-size: clamp(1.5rem, 7vw, 2.4rem);
+}
+
+.goat-splash-message {
+  max-width: 28rem;
+  font-weight: 800;
+}
+
+.goat-splash-cta {
+  width: min(100%, 18rem);
+}
+
 .player-dashboard-summary {
   display: grid;
   gap: var(--space-3);

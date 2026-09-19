@@ -10,14 +10,14 @@ import { createManagerMessagesView } from './views/manager-messages.js?v=2026081
 import { createManagerReferralsView } from './views/manager-referrals.js?v=20260816-1';
 import { createPlayerRegisterView } from './views/player-register.js?v=20260816-1';
 import { createPlayerLoginView } from './views/player-login.js?v=20260816-1';
-import { createPlayerDashboardView } from './views/player-dashboard.js?v=20260823-12';
+import { createPlayerDashboardView } from './views/player-dashboard.js?v=20260918-1';
 import { createPlayerPicksView } from './views/player-picks.js?v=20260816-1';
 import { createPlayerMessagesView } from './views/player-messages.js?v=20260816-1';
 import { createPlayerPaymentsView } from './views/player-payments.js?v=20260823-12';
 import { createPlayerReferralsView } from './views/player-referrals.js?v=20260816-1';
 import { createPlayerHelpView } from './views/player-help.js?v=20260816-1';
 import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=20260816-1';
-import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260918-2';
+import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260918-3';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260823-4';
 
 const APP_DEPLOYMENT_VERSION = '20260823-14';
@@ -114,6 +114,12 @@ function createElement(tagName, options = {}) {
 function appendChildren(parent, children) {
   children.forEach((child) => parent.appendChild(child));
   return parent;
+}
+
+function routeQueryValue(name) {
+  const queryIndex = window.location.hash.indexOf('?');
+  if (queryIndex < 0) return '';
+  return new URLSearchParams(window.location.hash.slice(queryIndex + 1)).get(name) || '';
 }
 
 function createFeatureCard(eyebrow, title, body) {
@@ -233,7 +239,7 @@ registerRoute('player-messages', createPlayerMessagesView, { requiresPlayerSessi
 registerRoute('player-payments', createPlayerPaymentsView, { requiresPlayerSession: true });
 registerRoute('player-referrals', createPlayerReferralsView, { requiresPlayerSession: true });
 registerRoute('player-entry-picks', createPlayerEntryPicksView, { requiresPlayerSession: true });
-registerRoute('player-everybodys-picks', () => createEverybodysPicksView({ actor: 'player' }), { requiresPlayerSession: true });
+registerRoute('player-everybodys-picks', () => createEverybodysPicksView({ actor: 'player', initialTab: routeQueryValue('tab') }), { requiresPlayerSession: true });
 registerRoute('player-weekly-results', createWeeklyResultsView, { requiresPlayerSession: true });
 registerRoute('player-help', createPlayerHelpView, { requiresPlayerSession: true });
 startRouter(root);

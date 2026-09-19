@@ -465,11 +465,12 @@ function renderWeeklyResultsBanner(data, config) {
   return button;
 }
 
-export function createEverybodysPicksView({ actor = 'player' } = {}) {
+export function createEverybodysPicksView({ actor = 'player', initialTab = 'weekly' } = {}) {
   const config = actorConfig(actor);
   let boardData = null;
   let loadVersion = 0;
-  let activeLeaderboardTab = 'weekly';
+  let activeLeaderboardTab = ['weekly', 'season', 'allTime', 'goat'].includes(initialTab) ? initialTab : 'weekly';
+  let hasLoadedBoard = false;
   const wrapper = createElement('main', { className: 'page-container' });
   const header = createElement('section', { className: 'state-card manager-toolbar' });
   const identityRow = createElement('div', { className: 'everybodys-picks-identity' });
@@ -566,7 +567,8 @@ export function createEverybodysPicksView({ actor = 'player' } = {}) {
       const result = await requestAction(config.action, actionPayload(weekId));
       if (currentVersion !== loadVersion || !wrapper.isConnected) return;
       boardData = result.data || {};
-      activeLeaderboardTab = 'weekly';
+      activeLeaderboardTab = hasLoadedBoard ? 'weekly' : activeLeaderboardTab;
+      hasLoadedBoard = true;
       message.textContent = '';
       message.classList.remove('error-text');
       render();
