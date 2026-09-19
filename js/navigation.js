@@ -44,7 +44,7 @@ function keepActivePlayerNavItemVisible(nav) {
 }
 
 export function createPlayerNav(currentRoute = getCurrentRoute()) {
-  const nav = createTopNav([
+  const items = [
     { label: 'Home', route: 'player-dashboard' },
     { label: 'Payments', route: 'player-payments' },
     { label: 'Picks', route: 'player-picks' },
@@ -53,7 +53,8 @@ export function createPlayerNav(currentRoute = getCurrentRoute()) {
     { label: 'Referrals', route: 'player-referrals' },
     { label: 'Messages', route: 'player-messages' },
     { label: 'Help / Rules', route: 'player-help' },
-  ], currentRoute);
+  ].filter((item) => currentRoute !== 'player-dashboard' || item.route !== 'player-dashboard');
+  const nav = createTopNav(items, currentRoute);
   window.requestAnimationFrame(() => keepActivePlayerNavItemVisible(nav));
   return nav;
 }
