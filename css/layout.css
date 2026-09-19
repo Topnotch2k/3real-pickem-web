@@ -1571,7 +1571,7 @@ thead .picks-board-sticky {
 .page-container:has(.player-list[aria-label="Entry sheets"]) > .state-card:has(.player-list[aria-label="Entry sheets"]),
 .page-container:has(.payment-state-screen) > .state-card:first-of-type,
 .pick-sheet-page > .state-card,
-.competitive-page > .state-card:has(.picks-board-scroll),
+.competitive-page .state-card:has(.picks-board-scroll),
 .competitive-page > .weekly-results-shell {
   position: relative;
 }
@@ -1599,7 +1599,7 @@ thead .picks-board-sticky {
   position: fixed;
 }
 
-.competitive-page > .state-card:has(.picks-board-scroll)::before,
+.competitive-page .state-card:has(.picks-board-scroll)::before,
 .competitive-page > .weekly-results-shell::before {
   content: '';
   position: fixed;
@@ -1617,7 +1617,7 @@ thead .picks-board-sticky {
 .page-container:has(.player-list[aria-label="Entry sheets"]) > .state-card:has(.player-list[aria-label="Entry sheets"]) > *,
 .page-container:has(.payment-state-screen) > .state-card:first-of-type > *,
 .pick-sheet-page > .state-card > *,
-.competitive-page > .state-card:has(.picks-board-scroll) > *,
+.competitive-page .state-card:has(.picks-board-scroll) > *,
 .competitive-page > .weekly-results-shell > * {
   position: relative;
   z-index: 1;
