@@ -285,6 +285,7 @@ function renderLeaderboardTable(columns, rows, cellRenderers) {
       const cell = createElement(index === 0 ? 'th' : 'td', { attributes: index === 0 ? { scope: 'row' } : {} });
       const content = renderCell(row);
       if (Array.isArray(content)) appendChildren(cell, content.filter(Boolean));
+      else if (content instanceof HTMLElement) cell.appendChild(content);
       else cell.textContent = content;
       tr.appendChild(cell);
     });
