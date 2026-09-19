@@ -46,19 +46,22 @@ async function playerDashboardBootstrapSection(bootstrapRequest, sectionName) {
   return section.data;
 }
 
-const GOAT_SPLASH_STORAGE_PREFIX = '3real_pickem_goat_splash_seen:';
+const GOAT_SPLASH_STORAGE_PREFIX = '3real_pickem_goat_splash_views:';
 
-function goatSplashWasSeen(playerId, weekId) {
+function goatSplashViewCount(playerId, weekId) {
   try {
-    return window.localStorage.getItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`) !== null;
+    const count = Number.parseInt(window.localStorage.getItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`) || '0', 10);
+    return Number.isFinite(count) && count >= 0 ? count : 0;
   } catch {
-    return false;
+    return 0;
   }
 }
 
-function markGoatSplashSeen(playerId, weekId) {
+function incrementGoatSplashViewCount(playerId, weekId) {
   try {
-    window.localStorage.setItem(`${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`, '1');
+    const key = `${GOAT_SPLASH_STORAGE_PREFIX}${playerId}:${weekId}`;
+    const count = goatSplashViewCount(playerId, weekId);
+    window.localStorage.setItem(key, String(count + 1));
   } catch {
     // Storage failure should not block the dashboard or splash.
   }
@@ -112,13 +115,13 @@ async function loadGoatSplash(wrapper, player, bootstrapRequest) {
   try {
     const entrySheets = await playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets');
     const weekId = String(entrySheets.week && entrySheets.week.weekId || '').trim();
-    if (!weekId || goatSplashWasSeen(playerId, weekId) || !wrapper.isConnected) return;
+    if (!weekId || goatSplashViewCount(playerId, weekId) >= 2 || !wrapper.isConnected) return;
     const result = await playerAction('player.week.picksBoard', { weekId });
     if (!wrapper.isConnected) return;
     if (!result.data || !Object.prototype.hasOwnProperty.call(result.data, 'goatSummary')) return;
     const splash = createGoatSplash(result.data.goatSummary, () => splash.remove());
     wrapper.appendChild(splash);
-    markGoatSplashSeen(playerId, weekId);
+    incrementGoatSplashViewCount(playerId, weekId);
     splash.querySelector('.goat-splash-close')?.focus();
   } catch {
     // A failed GOAT read must never interrupt the dashboard.
