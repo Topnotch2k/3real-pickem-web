@@ -1094,6 +1094,32 @@ h1 {
   max-width: 72rem;
 }
 
+.pick-deadline-warning {
+  border-color: rgba(224, 111, 54, 0.82);
+  background: linear-gradient(180deg, rgba(72, 39, 21, 0.78), rgba(18, 13, 9, 0.98));
+}
+
+.pick-deadline-warning .pick-deadline-title {
+  color: #ffb36b;
+}
+
+.pick-deadline-responsibility {
+  margin-bottom: var(--space-2);
+  color: var(--color-white);
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.pick-deadline-responsibility strong {
+  color: #ffd36b;
+}
+
+.pick-deadline-support {
+  margin-bottom: 0;
+  color: var(--color-muted);
+  line-height: 1.35;
+}
+
 .entry-sheet-switcher {
   max-width: 22rem;
   margin-top: var(--space-3);

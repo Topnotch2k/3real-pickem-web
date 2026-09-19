@@ -26,10 +26,18 @@ export function createPlayerPicksView() {
   const wrapper = createElement('main', { className: 'page-container' });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
   const entrySheets = createEntrySheetsCard(bootstrapRequest);
-  const warning = createElement('section', { className: 'state-card compact-card' });
+  const warning = createElement('section', { className: 'state-card compact-card pick-deadline-warning' });
+  const responsibility = createElement('p', { className: 'pick-deadline-responsibility' });
+  appendChildren(responsibility, [
+    document.createTextNode('YOU ARE RESPONSIBLE FOR '),
+    createElement('strong', { text: 'SAVING' }),
+    document.createTextNode(' YOUR PICKS BEFORE EACH GAME LOCKS.'),
+  ]);
   appendChildren(warning, [
-    createElement('p', { className: 'eyebrow', text: 'Pick Deadline' }),
-    createElement('p', { className: 'muted', text: "Paid entry ready: make and save your picks before each game locks. Locked games do not reopen, and missed picks are not refundable." }),
+    createElement('p', { className: 'eyebrow pick-deadline-title', text: 'PICK DEADLINE ⚠️' }),
+    responsibility,
+    createElement('p', { className: 'pick-deadline-support', text: 'Locked games do not reopen.' }),
+    createElement('p', { className: 'pick-deadline-support', text: 'Missed picks are not refundable.' }),
   ]);
   appendChildren(wrapper, [
     createPlayerNav('player-picks'),
