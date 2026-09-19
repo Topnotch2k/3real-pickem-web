@@ -1212,6 +1212,11 @@ h1 {
   font-size: 0.82rem;
 }
 
+.league-leader-card:nth-child(1),
+.league-leader-card:nth-child(3) {
+  align-content: start;
+}
+
 .league-leader-list {
   display: grid;
   align-content: start;
