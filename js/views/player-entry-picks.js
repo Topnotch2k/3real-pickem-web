@@ -232,10 +232,20 @@ export function createPlayerEntryPicksView() {
   }
 
   function gameStatusPill(game) {
+    const locked = !game.editable || (game.lockAt && new Date(game.lockAt).getTime() <= Date.now());
     return createElement('span', {
-      className: `status-pill ${game.editable ? '' : 'status-pill-muted'}`,
-      text: game.editable ? 'Editable' : 'Locked',
+      className: `status-pill ${locked ? 'status-pill-danger' : 'status-pill-muted'}`,
+      text: locked ? '🔒 LOCKED' : 'Editable',
     });
+  }
+
+  function gameLockPresentation(game) {
+    const lockAt = new Date(game.lockAt).getTime();
+    if (!game.editable || (Number.isFinite(lockAt) && lockAt <= Date.now())) return 'game-lock-locked';
+    const remaining = lockAt - Date.now();
+    if (remaining <= 6 * 60 * 60 * 1000) return 'game-lock-urgent';
+    if (remaining <= 24 * 60 * 60 * 1000) return 'game-lock-warning';
+    return 'game-lock-normal';
   }
 
   function gameMetaLines(game, selected) {
@@ -247,8 +257,11 @@ export function createPlayerEntryPicksView() {
         ]
       : [];
     return [
-      createElement('p', { className: 'muted', text: `Kickoff: ${formatDateTime(game.kickoffAt)}` }),
-      createElement('p', { className: 'muted', text: `Locks: ${formatDateTime(game.lockAt)}` }),
+      appendChildren(createElement('div', { className: `game-lock-meta ${gameLockPresentation(game)}` }), [
+        createElement('span', { className: 'game-lock-label', text: 'GAME LOCK' }),
+        createElement('strong', { className: 'game-lock-time', text: formatDateTime(game.lockAt) }),
+      ]),
+      createElement('p', { className: 'muted game-kickoff-meta', text: `Kickoff: ${formatDateTime(game.kickoffAt)}` }),
       ...(game.awayScore !== '' && game.homeScore !== '' ? [createElement('p', {
         className: 'muted',
         text: `${game.awayTeam} ${game.awayScore}, ${game.homeTeam} ${game.homeScore}${game.winnerTeam ? ` - Winner: ${game.winnerTeam}` : ' - Tie'}`,

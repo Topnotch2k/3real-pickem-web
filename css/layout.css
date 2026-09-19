@@ -795,6 +795,11 @@ h1 {
   color: #f87171;
 }
 
+.pool-lock-closed .pool-lock-countdown {
+  color: #f87171;
+  font-weight: 900;
+}
+
 .pool-lock-critical {
   background: rgba(127, 29, 29, 0.24);
 }
@@ -1305,6 +1310,48 @@ h1 {
 .pick-game-meta .muted,
 .pick-game-meta .status-pill {
   margin: 0;
+}
+
+.game-lock-meta {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.game-lock-label {
+  color: var(--color-gold-soft);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.game-lock-time {
+  color: var(--color-gold-soft);
+  font-size: 1.08rem;
+  line-height: 1.15;
+}
+
+.game-kickoff-meta {
+  font-size: 0.86rem;
+}
+
+.game-lock-warning .game-lock-label,
+.game-lock-warning .game-lock-time {
+  color: #fb923c;
+}
+
+.game-lock-urgent .game-lock-label,
+.game-lock-urgent .game-lock-time,
+.game-lock-locked .game-lock-label,
+.game-lock-locked .game-lock-time {
+  color: var(--color-danger);
+}
+
+.game-lock-urgent .game-lock-time,
+.game-lock-locked .game-lock-time {
+  font-weight: 900;
 }
 
 .tiebreaker-panel {

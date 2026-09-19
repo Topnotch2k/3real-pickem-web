@@ -2149,8 +2149,8 @@ function createPoolLockCard(bootstrapRequest) {
     const remainingMs = lockAtMs - Date.now();
     if (remainingMs <= 0) {
       card.className = 'pool-lock-bar pool-lock-closed';
-      label.textContent = 'POOL CLOSED FOR NEW ENTRIES';
-      countdown.textContent = '';
+      label.textContent = 'POOL CLOSED FOR NEW ENTRIES THIS WEEK';
+      countdown.textContent = '00:00';
       helper.textContent = '';
       card.hidden = false;
       stopTimer();
