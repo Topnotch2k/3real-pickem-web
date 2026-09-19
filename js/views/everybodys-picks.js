@@ -61,6 +61,55 @@ function plural(value, singular, pluralText) {
   return Number(value) === 1 ? singular : pluralText;
 }
 
+const BADGE_PRIORITY = [
+  'goat',
+  'perfect_week',
+  'weekly_champ',
+  'multi_champ',
+  'hot_streak',
+  'exact_tiebreaker',
+  'referral_milestone',
+  'recruiter',
+];
+
+const BADGE_EMOJI = {
+  goat: '🐐',
+  perfect_week: '💯',
+  weekly_champ: '👑',
+  multi_champ: '🏆',
+  hot_streak: '🔥',
+  exact_tiebreaker: '🎯',
+  referral_milestone: '💎',
+  recruiter: '🤝',
+};
+
+function renderBadgeEmojis(badgeCodes) {
+  const codes = Array.isArray(badgeCodes) ? badgeCodes : [];
+  const badges = BADGE_PRIORITY
+    .filter((code) => codes.includes(code))
+    .slice(0, 3)
+    .map((code) => createElement('span', {
+      className: 'player-badge',
+      text: BADGE_EMOJI[code],
+      attributes: { 'aria-label': code.replace(/_/g, ' '), title: code.replace(/_/g, ' ') },
+    }));
+  if (!badges.length) return null;
+  const container = createElement('span', {
+    className: 'player-name-badges',
+    attributes: { 'aria-label': 'Earned badges' },
+  });
+  return appendChildren(container, badges);
+}
+
+function renderPlayerName(name, badgeCodes) {
+  const nameWithBadges = createElement('span', { className: 'player-name-with-badges' });
+  appendChildren(nameWithBadges, [
+    createElement('span', { text: name || 'Unknown player' }),
+    renderBadgeEmojis(badgeCodes),
+  ].filter(Boolean));
+  return nameWithBadges;
+}
+
 function formatPercent(value) {
   if (value === '' || value === null || value === undefined) return '-';
   const number = Number(value);
@@ -118,11 +167,11 @@ function correctPicksLabel(value) {
   return Number.isFinite(number) ? `${number} Correct` : '';
 }
 
-function renderPlayerCell(row) {
+function renderPlayerCell(row, badgesByPlayer = {}) {
   const cell = createElement('th', { className: 'picks-board-sticky picks-board-player', attributes: { scope: 'row' } });
   const correctLabel = correctPicksLabel(row.correctPicks);
   appendChildren(cell, [
-    createElement('span', { text: row.playerName || 'Unknown player' }),
+    renderPlayerName(row.playerName, Array.isArray(row.badgeCodes) ? row.badgeCodes : badgesByPlayer[row.playerId]),
     createElement('span', { className: 'muted', text: row.entryLabel || row.entryId || 'Entry' }),
     correctLabel ? createElement('span', { className: 'muted', text: correctLabel }) : null,
   ].filter(Boolean));
@@ -164,7 +213,7 @@ function renderBoard(data) {
   const tbody = createElement('tbody');
   data.rows.forEach((row) => {
     const tr = createElement('tr');
-    tr.appendChild(renderPlayerCell(row));
+    tr.appendChild(renderPlayerCell(row, data.badgesByPlayer));
     (data.matchups || []).forEach((game) => {
       tr.appendChild(renderPickCell(game, row.picks ? row.picks[game.gameId] : null));
     });
@@ -196,7 +245,7 @@ function renderLeaderCategory(title, rows, value) {
   (Array.isArray(rows) ? rows.slice(0, 3) : []).forEach((leader, index) => {
     const item = createElement('li');
     appendChildren(item, [
-      createElement('span', { text: `${index + 1}. ${leader.playerName || 'Unknown player'}` }),
+      renderPlayerName(`${index + 1}. ${leader.playerName || 'Unknown player'}`, leader.badgeCodes),
       createElement('span', { className: 'muted', text: value(leader) }),
     ]);
     list.appendChild(item);
@@ -256,7 +305,7 @@ function renderWeeklyLeaderboard(weekly) {
     [
       (standing) => displayValue(standing.position),
       (standing) => [
-        createElement('span', { text: standing.playerName || 'Unknown player' }),
+        renderPlayerName(standing.playerName, standing.badgeCodes),
         createElement('small', { className: 'muted', text: standing.entryLabel || standing.entryId || 'Entry' }),
         renderWinnerPill(standing),
       ],
@@ -279,7 +328,7 @@ function renderSeasonLeaderboard(season) {
     standings,
     [
       (standing) => displayValue(standing.position),
-      (standing) => displayValue(standing.playerName),
+      (standing) => renderPlayerName(standing.playerName, standing.badgeCodes),
       (standing) => displayValue(standing.totalCorrect),
       (standing) => formatPercent(standing.accuracy),
       (standing) => displayValue(standing.weeklyWins),
@@ -298,7 +347,7 @@ function renderAllTimeLeaderboard(allTime) {
     standings,
     [
       (standing) => displayValue(standing.position),
-      (standing) => displayValue(standing.playerName),
+      (standing) => renderPlayerName(standing.playerName, standing.badgeCodes),
       (standing) => displayValue(standing.weeklyWins),
       (standing) => formatPercent(standing.accuracy),
       (standing) => displayValue(standing.totalCorrect),
