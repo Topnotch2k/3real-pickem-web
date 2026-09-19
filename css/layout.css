@@ -1567,20 +1567,31 @@ thead .picks-board-sticky {
   gap: 0.2rem var(--space-2);
 }
 
-.player-dashboard-page::before,
-.page-container:has(.player-list[aria-label="Entry sheets"])::before,
-.page-container:has(.payment-state-screen)::before,
-.pick-sheet-page::before {
+.player-dashboard-card,
+.page-container:has(.player-list[aria-label="Entry sheets"]) > .state-card:has(.player-list[aria-label="Entry sheets"]),
+.page-container:has(.payment-state-screen) > .state-card:first-of-type,
+.pick-sheet-page > .state-card,
+.competitive-page > .state-card:has(.picks-board-scroll),
+.competitive-page > .weekly-results-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.player-dashboard-card::before,
+.page-container:has(.player-list[aria-label="Entry sheets"]) > .state-card:has(.player-list[aria-label="Entry sheets"])::before,
+.page-container:has(.payment-state-screen) > .state-card:first-of-type::before,
+.pick-sheet-page > .state-card::before {
   content: '';
   position: absolute;
-  inset: 2rem 0 0;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
   background: url('../assets/brand/3real-pickem-logo.png') center 42% / min(86vw, 34rem) auto no-repeat;
   opacity: 0.22;
 }
 
-.competitive-page::before {
+.competitive-page > .state-card:has(.picks-board-scroll)::before,
+.competitive-page > .weekly-results-shell::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -1591,6 +1602,16 @@ thead .picks-board-sticky {
   background-position: center 40%;
   background-size: min(90vw, 38rem) auto;
   opacity: 0.24;
+}
+
+.player-dashboard-card > *,
+.page-container:has(.player-list[aria-label="Entry sheets"]) > .state-card:has(.player-list[aria-label="Entry sheets"]) > *,
+.page-container:has(.payment-state-screen) > .state-card:first-of-type > *,
+.pick-sheet-page > .state-card > *,
+.competitive-page > .state-card:has(.picks-board-scroll) > *,
+.competitive-page > .weekly-results-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 .competitive-page > :not(.goat-splash-overlay) {
