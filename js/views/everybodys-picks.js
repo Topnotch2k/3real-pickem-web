@@ -471,6 +471,8 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
   let loadVersion = 0;
   let activeLeaderboardTab = ['weekly', 'season', 'allTime', 'goat'].includes(initialTab) ? initialTab : 'weekly';
   let hasLoadedBoard = false;
+  const initialGoatDeepLink = initialTab === 'goat';
+  let didInitialGoatScroll = false;
   const wrapper = createElement('main', { className: 'page-container' });
   const header = createElement('section', { className: 'state-card manager-toolbar' });
   const identityRow = createElement('div', { className: 'everybodys-picks-identity' });
@@ -553,6 +555,16 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
       if (wrapper.isConnected) render();
     }));
     boardRegion.replaceChildren(renderBoard(boardData || { availableWeeks: [], week: null, rows: [] }));
+    if (initialGoatDeepLink && !didInitialGoatScroll && leaderboardRegion.isConnected) {
+      didInitialGoatScroll = true;
+      window.requestAnimationFrame(() => {
+        try {
+          leaderboardRegion.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        } catch {
+          // Scrolling is an enhancement and must not interrupt the board.
+        }
+      });
+    }
   }
 
   async function loadBoard(weekId = '') {
