@@ -2106,6 +2106,89 @@ function createNextStepCard(bootstrapRequest) {
   return card;
 }
 
+function createPoolLockCard(bootstrapRequest) {
+  let timerId = null;
+  let lockAtMs = 0;
+  let disconnectObserver = null;
+  const card = createElement('section', {
+    className: 'pool-lock-bar pool-lock-neutral',
+    attributes: { hidden: 'hidden', 'aria-live': 'polite' },
+  });
+  const label = createElement('p', { className: 'pool-lock-label', text: 'POOL LOCK' });
+  const countdown = createElement('strong', { className: 'pool-lock-countdown' });
+  const helper = createElement('p', { className: 'pool-lock-helper', text: 'Buy in before the first game locks.' });
+  appendChildren(card, [label, countdown, helper]);
+
+  const stopTimer = () => {
+    if (timerId !== null) {
+      window.clearTimeout(timerId);
+      timerId = null;
+    }
+  };
+  const stopWhenDisconnected = () => {
+    if (!card.isConnected) {
+      stopTimer();
+      disconnectObserver?.disconnect();
+    }
+  };
+  const formatCountdown = (remainingMs) => {
+    const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (days > 0) return `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`;
+    if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+    return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+  };
+  const render = () => {
+    if (!card.isConnected) {
+      stopTimer();
+      return;
+    }
+    const remainingMs = lockAtMs - Date.now();
+    if (remainingMs <= 0) {
+      card.className = 'pool-lock-bar pool-lock-closed';
+      label.textContent = 'POOL CLOSED FOR NEW ENTRIES';
+      countdown.textContent = '';
+      helper.textContent = '';
+      card.hidden = false;
+      stopTimer();
+      return;
+    }
+    const day = 24 * 60 * 60 * 1000;
+    card.className = remainingMs < 60 * 60 * 1000
+      ? 'pool-lock-bar pool-lock-critical'
+      : remainingMs < 6 * 60 * 60 * 1000
+        ? 'pool-lock-bar pool-lock-danger'
+        : remainingMs <= day
+          ? 'pool-lock-bar pool-lock-warning'
+          : 'pool-lock-bar pool-lock-neutral';
+    label.textContent = 'POOL LOCK';
+    countdown.textContent = formatCountdown(remainingMs);
+    helper.textContent = 'Buy in before the first game locks.';
+    card.hidden = false;
+    stopTimer();
+    timerId = window.setTimeout(render, remainingMs > day ? 60000 : 1000);
+  };
+
+  playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets')
+    .then((entrySheets) => {
+      const firstLockAt = entrySheets.thisWeek && entrySheets.thisWeek.firstLockAt;
+      const parsed = firstLockAt ? new Date(firstLockAt).getTime() : NaN;
+      if (!entrySheets.thisWeek || !Number.isFinite(parsed)) return;
+      lockAtMs = parsed;
+      render();
+    })
+    .catch(() => undefined);
+  card.cleanupPoolLock = stopTimer;
+  if (typeof MutationObserver !== 'undefined' && document.body) {
+    disconnectObserver = new MutationObserver(stopWhenDisconnected);
+    disconnectObserver.observe(document.body, { childList: true, subtree: true });
+  }
+  return card;
+}
+
 function createHowToPlayCard() {
   const card = createElement('section', { className: 'state-card compact-card' });
   const list = createElement('ol', { className: 'player-list' });
@@ -2163,6 +2246,7 @@ export function createPlayerDashboardView(context = {}) {
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
   const moraleCard = createDashboardMoraleCard(bootstrapRequest);
+  const poolLockCard = createPoolLockCard(bootstrapRequest);
   const nextStepCard = createNextStepCard(bootstrapRequest);
   const howToPlayCard = createHowToPlayCard();
   const thisWeekHelper = createThisWeekHelper(bootstrapRequest);
@@ -2211,6 +2295,7 @@ export function createPlayerDashboardView(context = {}) {
   appendChildren(wrapper, [
     createPlayerNav('player-dashboard'),
     card,
+    poolLockCard,
     nextStepCard,
     howToPlayCard,
     moraleCard,

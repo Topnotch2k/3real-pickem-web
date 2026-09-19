@@ -738,6 +738,71 @@ h1 {
   padding: var(--space-4);
 }
 
+.pool-lock-bar {
+  display: grid;
+  gap: 0.15rem;
+  margin: var(--space-3) 0;
+  border: 1px solid rgba(217, 173, 50, 0.78);
+  border-radius: var(--radius-md);
+  background: rgba(7, 9, 7, 0.94);
+  padding: 0.65rem var(--space-3);
+}
+
+.pool-lock-label,
+.pool-lock-countdown,
+.pool-lock-helper {
+  margin: 0;
+}
+
+.pool-lock-label {
+  color: var(--color-gold-soft);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.pool-lock-countdown {
+  color: var(--color-gold-soft);
+  font-size: clamp(1.35rem, 5vw, 2rem);
+  line-height: 1.05;
+}
+
+.pool-lock-helper {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.pool-lock-warning {
+  border-color: #d97706;
+}
+
+.pool-lock-warning .pool-lock-label,
+.pool-lock-warning .pool-lock-countdown {
+  color: #fb923c;
+}
+
+.pool-lock-danger,
+.pool-lock-critical,
+.pool-lock-closed {
+  border-color: #dc2626;
+}
+
+.pool-lock-danger .pool-lock-label,
+.pool-lock-danger .pool-lock-countdown,
+.pool-lock-critical .pool-lock-label,
+.pool-lock-critical .pool-lock-countdown,
+.pool-lock-closed .pool-lock-label {
+  color: #f87171;
+}
+
+.pool-lock-critical {
+  background: rgba(127, 29, 29, 0.24);
+}
+
+.pool-lock-closed {
+  background: rgba(127, 29, 29, 0.34);
+}
+
 .pin-panel {
   border: 1px solid rgba(217, 173, 50, 0.8);
   border-radius: var(--radius-lg);

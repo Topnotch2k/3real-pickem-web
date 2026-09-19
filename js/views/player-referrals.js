@@ -1,7 +1,7 @@
 import { requestAction } from '../api.js?v=20260816-1';
 import { getPlayerSessionToken } from '../player-auth.js?v=20260816-1';
 import { createPlayerNav } from '../navigation.js?v=20260919-6';
-import { createInviteFriendsCard } from './player-dashboard.js?v=20260919-8';
+import { createInviteFriendsCard } from './player-dashboard.js?v=20260919-9';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
