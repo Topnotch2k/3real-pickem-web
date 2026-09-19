@@ -1574,6 +1574,9 @@ thead .picks-board-sticky {
 .competitive-page > .state-card:has(.picks-board-scroll),
 .competitive-page > .weekly-results-shell {
   position: relative;
+}
+
+.player-dashboard-card {
   overflow: hidden;
 }
 
@@ -1590,10 +1593,16 @@ thead .picks-board-sticky {
   opacity: 0.22;
 }
 
+.page-container:has(.player-list[aria-label="Entry sheets"]) > .state-card:has(.player-list[aria-label="Entry sheets"])::before,
+.page-container:has(.payment-state-screen) > .state-card:first-of-type::before,
+.pick-sheet-page > .state-card::before {
+  position: fixed;
+}
+
 .competitive-page > .state-card:has(.picks-board-scroll)::before,
 .competitive-page > .weekly-results-shell::before {
   content: '';
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
