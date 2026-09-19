@@ -437,6 +437,65 @@ h1 {
   justify-content: inherit;
 }
 
+.player-badge {
+  display: inline-flex;
+  width: 1.35em;
+  height: 1.35em;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(242, 211, 107, 0.48);
+  border-radius: 0.35rem;
+  background: rgba(242, 211, 107, 0.1);
+  font-size: 0.92em;
+  line-height: 1;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.18);
+}
+
+.player-badge-goat {
+  border-color: rgba(242, 211, 107, 0.92);
+  background: rgba(217, 173, 50, 0.28);
+  box-shadow: 0 0 8px rgba(242, 211, 107, 0.3);
+}
+
+.player-badge-perfect-week {
+  border-color: rgba(255, 244, 190, 0.9);
+  background: rgba(255, 244, 190, 0.2);
+  color: #fff4be;
+}
+
+.player-badge-weekly-champ {
+  border-color: rgba(242, 211, 107, 0.82);
+  background: rgba(217, 173, 50, 0.22);
+  color: var(--color-gold-soft);
+}
+
+.player-badge-multi-champ {
+  border-color: rgba(224, 163, 74, 0.82);
+  background: rgba(224, 163, 74, 0.2);
+}
+
+.player-badge-hot-streak {
+  border-color: rgba(255, 142, 64, 0.82);
+  background: rgba(255, 104, 48, 0.18);
+  box-shadow: 0 0 7px rgba(255, 104, 48, 0.2);
+}
+
+.player-badge-exact-tiebreaker {
+  border-color: rgba(93, 205, 224, 0.82);
+  background: rgba(48, 157, 184, 0.18);
+}
+
+.player-badge-referral-milestone {
+  border-color: rgba(93, 196, 224, 0.82);
+  background: rgba(48, 157, 184, 0.16);
+}
+
+.player-badge-recruiter {
+  border-color: rgba(87, 214, 115, 0.68);
+  background: rgba(87, 214, 115, 0.12);
+}
+
 .player-name-with-badges {
   display: inline-flex;
   align-items: center;

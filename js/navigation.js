@@ -29,17 +29,33 @@ function createTopNav(items, currentRoute) {
   return nav;
 }
 
+function keepActivePlayerNavItemVisible(nav) {
+  const activeButton = nav.querySelector('[aria-current="page"]');
+  if (!activeButton) return;
+  const visibleLeft = nav.scrollLeft;
+  const visibleRight = visibleLeft + nav.clientWidth;
+  const itemLeft = activeButton.offsetLeft;
+  const itemRight = itemLeft + activeButton.offsetWidth;
+  if (itemLeft < visibleLeft) {
+    nav.scrollLeft = itemLeft;
+  } else if (itemRight > visibleRight) {
+    nav.scrollLeft = itemRight - nav.clientWidth;
+  }
+}
+
 export function createPlayerNav(currentRoute = getCurrentRoute()) {
-  return createTopNav([
+  const nav = createTopNav([
     { label: 'Home', route: 'player-dashboard' },
-    { label: 'Picks', route: 'player-picks' },
-    { label: 'Messages', route: 'player-messages' },
     { label: 'Payments', route: 'player-payments' },
-    { label: 'Referrals', route: 'player-referrals' },
+    { label: 'Picks', route: 'player-picks' },
     { label: "Everybody's Picks", route: 'player-everybodys-picks' },
     { label: 'Results', route: 'player-weekly-results' },
+    { label: 'Referrals', route: 'player-referrals' },
+    { label: 'Messages', route: 'player-messages' },
     { label: 'Help / Rules', route: 'player-help' },
   ], currentRoute);
+  window.requestAnimationFrame(() => keepActivePlayerNavItemVisible(nav));
+  return nav;
 }
 
 export function createManagerNav(currentRoute = getCurrentRoute()) {

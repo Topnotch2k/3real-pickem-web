@@ -106,11 +106,47 @@ function placeTitle(place) {
   return `${place}TH PLACE`;
 }
 
+const BADGE_PRIORITY = [
+  'goat',
+  'perfect_week',
+  'weekly_champ',
+  'multi_champ',
+  'hot_streak',
+  'exact_tiebreaker',
+  'referral_milestone',
+  'recruiter',
+];
+
+const BADGE_EMOJI = {
+  goat: '🐐',
+  perfect_week: '💯',
+  weekly_champ: '👑',
+  multi_champ: '🏆',
+  hot_streak: '🔥',
+  exact_tiebreaker: '🎯',
+  referral_milestone: '💎',
+  recruiter: '🤝',
+};
+
 function renderBadges(codes) {
-  const list = createElement('div', { className: 'weekly-results-badges' });
-  (Array.isArray(codes) ? codes : []).forEach((code) => {
-    list.appendChild(createElement('span', { className: 'status-pill', text: String(code).replace(/_/g, ' ') }));
+  const list = createElement('div', {
+    className: 'weekly-results-badges',
+    attributes: { 'aria-label': 'Earned badges' },
   });
+  BADGE_PRIORITY
+    .filter((code) => Array.isArray(codes) && codes.includes(code))
+    .slice(0, 3)
+    .forEach((code) => {
+      list.appendChild(createElement('span', {
+        className: `player-badge player-badge-${code.replace(/_/g, '-')}`,
+        text: BADGE_EMOJI[code],
+        attributes: {
+          'data-badge-code': code,
+          'aria-label': code.replace(/_/g, ' '),
+          title: code.replace(/_/g, ' '),
+        },
+      }));
+    });
   return list;
 }
 

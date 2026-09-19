@@ -89,9 +89,13 @@ function renderBadgeEmojis(badgeCodes) {
     .filter((code) => codes.includes(code))
     .slice(0, 3)
     .map((code) => createElement('span', {
-      className: 'player-badge',
+      className: `player-badge player-badge-${code.replace(/_/g, '-')}`,
       text: BADGE_EMOJI[code],
-      attributes: { 'aria-label': code.replace(/_/g, ' '), title: code.replace(/_/g, ' ') },
+      attributes: {
+        'data-badge-code': code,
+        'aria-label': code.replace(/_/g, ' '),
+        title: code.replace(/_/g, ' '),
+      },
     }));
   if (!badges.length) return null;
   const container = createElement('span', {
