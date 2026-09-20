@@ -33,10 +33,17 @@ export function createPlayerPicksView() {
     createElement('strong', { text: 'SAVING' }),
     document.createTextNode(' YOUR PICKS BEFORE EACH GAME LOCKS.'),
   ]);
+  const lockTiming = createElement('p', { className: 'pick-deadline-support' });
+  appendChildren(lockTiming, [
+    document.createTextNode('Games lock '),
+    createElement('span', { className: 'pick-deadline-hours', text: '12' }),
+    document.createTextNode(' hours before kickoff.'),
+  ]);
   appendChildren(warning, [
     createElement('p', { className: 'eyebrow pick-deadline-title', text: 'PICK DEADLINE ⚠️' }),
     responsibility,
     createElement('p', { className: 'pick-deadline-support', text: 'Locked games do not reopen.' }),
+    lockTiming,
     createElement('p', { className: 'pick-deadline-support', text: 'Missed picks are not refundable.' }),
   ]);
   appendChildren(wrapper, [

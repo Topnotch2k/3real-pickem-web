@@ -1114,6 +1114,11 @@ h1 {
   color: #ffd36b;
 }
 
+.pick-deadline-hours {
+  color: #ffd36b;
+  font-weight: 900;
+}
+
 .pick-deadline-support {
   margin-bottom: 0;
   color: var(--color-muted);
