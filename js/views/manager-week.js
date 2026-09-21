@@ -76,8 +76,10 @@ function parseGameScore(input) {
   return Number.isSafeInteger(score) ? score : null;
 }
 
-function displayedGamesAreFinal(games) {
-  return Array.isArray(games) && games.length > 0 && games.every((game) => game.status === 'final');
+function gradingGamesAreFinal(games, tiebreakerRequiredForGrade = true) {
+  if (!Array.isArray(games) || games.length === 0) return false;
+  const latestGame = [...games].sort((left, right) => new Date(left.kickoffAt || 0).getTime() - new Date(right.kickoffAt || 0).getTime()).at(-1);
+  return games.every((game) => (game.gameId === latestGame?.gameId && tiebreakerRequiredForGrade === false) || game.status === 'final');
 }
 
 function seasonTypeLabel(value) {
@@ -240,14 +242,15 @@ export function createManagerWeekView() {
       className: 'muted',
       text: `Last refreshed: ${formatScoreRefreshTime(weekData.scoreLastRefreshedAt)}`,
     });
-    const allGamesFinal = displayedGamesAreFinal(weekData.games || []);
+    const allRegularGamesFinal = gradingGamesAreFinal(weekData.games || [], false);
+    const gradeReady = gradingGamesAreFinal(weekData.games || [], weekData.tiebreakerRequiredForGrade !== false);
     if (week.status === 'open') {
       const gradeButton = createElement('button', {
         className: 'primary-button',
         text: weekData.grading ? 'Regrade Week' : 'Grade Week',
         attributes: { type: 'button' },
       });
-      gradeButton.disabled = inFlight || !allGamesFinal;
+      gradeButton.disabled = inFlight || !gradeReady;
       gradeButton.addEventListener('click', () => gradeWeek());
       actions.appendChild(gradeButton);
     }
@@ -331,7 +334,12 @@ export function createManagerWeekView() {
       details,
       actions,
       scoreRefreshStatus,
-      ...(week.status === 'open' && !allGamesFinal ? [createElement('p', { className: 'muted', text: 'All Games must be final before grading.' })] : []),
+      ...(week.status === 'open' && !gradeReady ? [createElement('p', {
+        className: 'muted',
+        text: weekData.tiebreakerRequiredForGrade === false && allRegularGamesFinal
+          ? 'Regular picks have produced a unique winner. The week can be graded without the tiebreaker.'
+          : 'All Games must be final before grading.',
+      })] : []),
       games,
       ...(standings ? [standings] : []),
     ]);
