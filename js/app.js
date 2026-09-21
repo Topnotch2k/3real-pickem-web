@@ -17,10 +17,10 @@ import { createPlayerPaymentsView } from './views/player-payments.js?v=20260823-
 import { createPlayerReferralsView } from './views/player-referrals.js?v=20260816-1';
 import { createPlayerHelpView } from './views/player-help.js?v=20260816-1';
 import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=20260919-12';
-import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260920-2';
+import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260920-5';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260919-6';
 
-const APP_DEPLOYMENT_VERSION = '20260920-4';
+const APP_DEPLOYMENT_VERSION = '20260920-5';
 const UPDATE_TARGET_STORAGE_KEY = '3real-pickem-update-target';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 let updateCheckPromise = null;

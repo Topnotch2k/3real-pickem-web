@@ -267,7 +267,7 @@ function renderLeagueLeaders(data) {
   appendChildren(section, [
     renderLeaderCategory('\uD83D\uDC51 Most Wins', leaders.mostWins, (leader) => `${displayValue(leader.weeklyWins)} ${plural(leader.weeklyWins, 'win', 'wins')}`),
     renderLeaderCategory('\u2764\uFE0F Most Loyal', leaders.mostLoyal, (leader) => `${displayValue(leader.paidEntryCount)} ${plural(leader.paidEntryCount, 'entry', 'entries')}`),
-    renderLeaderCategory('\uD83D\uDCB0 BIGGEST POT', leaders.biggestPotWinners, (leader) => formatMoney(leader.totalPrizeWonCents)),
+    renderLeaderCategory('\uD83D\uDCB8 BIGGEST BAG', leaders.biggestPotWinners, (leader) => formatMoney(leader.totalPrizeWonCents)),
     renderLeaderCategory('\uD83E\uDD1D Top Recruiter', leaders.topRecruiter, (leader) => `${displayValue(leader.registeredRecruitCount)} ${plural(leader.registeredRecruitCount, 'recruit', 'recruits')}`),
   ]);
   return section;
