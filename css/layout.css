@@ -1119,6 +1119,62 @@ h1 {
   font-weight: 900;
 }
 
+.final-showdown {
+  border-color: rgba(224, 111, 54, 0.9);
+  background: linear-gradient(180deg, rgba(72, 39, 21, 0.9), rgba(18, 13, 9, 0.98));
+  text-align: center;
+}
+
+.final-showdown-title {
+  margin-bottom: var(--space-2);
+  color: #ffd36b;
+  font-size: clamp(1.35rem, 5vw, 2rem);
+  letter-spacing: 0.08em;
+}
+
+.final-showdown-copy {
+  margin-bottom: var(--space-3);
+  color: #ffb36b;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.final-showdown-contenders,
+.final-showdown-matchup {
+  overflow-wrap: anywhere;
+  color: var(--color-white);
+  font-weight: 900;
+}
+
+.final-showdown-contenders {
+  margin-bottom: var(--space-2);
+  font-size: 1.15rem;
+}
+
+.final-showdown-matchup {
+  margin-bottom: var(--space-3);
+  color: #ffd36b;
+  font-size: 1.05rem;
+}
+
+.final-showdown-picks {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 auto;
+  max-width: 28rem;
+}
+
+.final-showdown-pick {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgba(255, 211, 107, 0.35);
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--color-white);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .pick-deadline-support {
   margin-bottom: 0;
   color: var(--color-muted);

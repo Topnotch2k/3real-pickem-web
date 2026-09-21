@@ -458,6 +458,29 @@ function renderCurrentPot(data) {
   return panel;
 }
 
+function renderFinalShowdown(showdown) {
+  if (!showdown || showdown.active !== true || !showdown.decidingGame || !Array.isArray(showdown.contenders) || showdown.contenders.length !== 2) return null;
+  const card = createElement('section', { className: 'state-card final-showdown', attributes: { 'aria-labelledby': 'final-showdown-title' } });
+  const title = createElement('h2', { className: 'final-showdown-title', text: 'FINAL SHOWDOWN', attributes: { id: 'final-showdown-title' } });
+  const names = createElement('p', { className: 'final-showdown-contenders', text: showdown.contenders.map((contender) => contender.entryLabel || contender.playerName || 'Entry').join(' vs ') });
+  const matchup = createElement('p', { className: 'final-showdown-matchup', text: `${showdown.decidingGame.awayTeam} vs ${showdown.decidingGame.homeTeam}` });
+  const picks = createElement('div', { className: 'final-showdown-picks' });
+  showdown.contenders.forEach((contender) => {
+    picks.appendChild(createElement('p', {
+      className: 'final-showdown-pick',
+      text: `${contender.entryLabel || contender.playerName || 'Entry'} → ${contender.selectedTeam}`,
+    }));
+  });
+  appendChildren(card, [
+    title,
+    createElement('p', { className: 'final-showdown-copy', text: 'ONE GAME DECIDES IT ALL' }),
+    names,
+    matchup,
+    picks,
+  ]);
+  return card;
+}
+
 function renderWeeklyResultsBanner(data, config) {
   const weekId = data && data.selectedWeekId;
   const hasFinalResults = data.weeklyResults?.available === true,
@@ -521,6 +544,7 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
   const leadersRegion = createElement('section');
   const leaderboardRegion = createElement('section');
   const boardRegion = createElement('section');
+  const showdownRegion = createElement('section');
 
   function actionPayload(weekId = '') {
     return weekId ? { sessionToken: config.token(), weekId } : { sessionToken: config.token() };
@@ -573,6 +597,9 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
       if (wrapper.isConnected) render();
     }));
     boardRegion.replaceChildren(renderBoard(boardData || { availableWeeks: [], week: null, rows: [] }));
+    showdownRegion.replaceChildren();
+    const showdown = renderFinalShowdown(boardData && boardData.finalShowdown);
+    if (showdown) showdownRegion.appendChild(showdown);
     if (initialGoatDeepLink && !didInitialGoatScroll && leaderboardRegion.isConnected) {
       didInitialGoatScroll = true;
       window.requestAnimationFrame(() => {
@@ -644,6 +671,7 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
     actor === 'manager' ? createManagerNav('manager-everybodys-picks') : createPlayerNav('player-everybodys-picks'),
     leadersRegion,
     header,
+    showdownRegion,
     boardRegion,
     leaderboardRegion,
   ]);
