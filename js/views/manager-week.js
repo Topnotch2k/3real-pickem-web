@@ -478,7 +478,7 @@ export function createManagerWeekView() {
   }
 
   async function gradeWeek() {
-    if (inFlight || !weekData || !weekData.week || weekData.week.status !== 'open' || !displayedGamesAreFinal(weekData.games || [])) return;
+    if (inFlight || !weekData || !weekData.week || weekData.week.status !== 'open' || !gradingGamesAreFinal(weekData.games || [], weekData.tiebreakerRequiredForGrade !== false)) return;
     const regrade = Boolean(weekData.grading);
     if (!window.confirm(regrade ? 'Regrade all active entries using the current final results?' : 'Grade all active entries for this Week?')) return;
     setInFlight(true);
