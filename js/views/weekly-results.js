@@ -45,6 +45,18 @@ function selectorWeekLabel(week) {
   return `${week && week.season} - ${label}`;
 }
 
+function resultsWeekSort(left, right) {
+  const phase = (week) => {
+    if (week && week.seasonType === 'postseason') return 2;
+    if (week && week.seasonType === 'regular') return 1;
+    return 0;
+  };
+  return Number(right && right.season || 0) - Number(left && left.season || 0)
+    || phase(right) - phase(left)
+    || Number(right && right.nflWeek || 0) - Number(left && left.nflWeek || 0)
+    || String(left && left.weekId || '').localeCompare(String(right && right.weekId || ''));
+}
+
 function hasWeeklyResults(data) {
   const weeklyResults = data && data.weeklyResults;
   return Boolean(
@@ -373,8 +385,10 @@ export function createWeeklyResultsView() {
   }
 
   async function findFirstResultsWeek(availableWeeks = []) {
-    for (const week of availableWeeks) {
-      if (!week || !week.weekId) continue;
+    const candidates = [...availableWeeks]
+      .filter((week) => week && week.weekId)
+      .sort(resultsWeekSort);
+    for (const week of candidates) {
       try {
         const data = await fetchBoardData(week.weekId);
         boardCache.set(`checked:${week.weekId}`, true);

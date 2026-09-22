@@ -2132,7 +2132,7 @@ function createPoolLockCard(bootstrapRequest) {
     className: 'pool-lock-bar pool-lock-neutral',
     attributes: { hidden: 'hidden', 'aria-live': 'polite' },
   });
-  const label = createElement('p', { className: 'pool-lock-label', text: 'POOL LOCK' });
+  const label = createElement('p', { className: 'pool-lock-label', text: 'POOL LOCKS IN' });
   const countdown = createElement('strong', { className: 'pool-lock-countdown' });
   const helper = createElement('p', { className: 'pool-lock-helper', text: 'Buy in before the first game locks.' });
   appendChildren(card, [label, countdown, helper]);
@@ -2182,7 +2182,7 @@ function createPoolLockCard(bootstrapRequest) {
         : remainingMs <= day
           ? 'pool-lock-bar pool-lock-warning'
           : 'pool-lock-bar pool-lock-neutral';
-    label.textContent = 'POOL LOCK';
+    label.textContent = 'POOL LOCKS IN';
     countdown.textContent = formatCountdown(remainingMs);
     helper.textContent = 'Buy in before the first game locks.';
     card.hidden = false;
