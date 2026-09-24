@@ -2127,15 +2127,21 @@ function createNextStepCard(bootstrapRequest) {
 function createPoolLockCard(bootstrapRequest) {
   let timerId = null;
   let lockAtMs = 0;
+  let lockMode = 'buy-in';
+  let closedState = 'buy-ins';
+  let hasActiveEntry = false;
+  let nextGameLockAtMs = 0;
+  let refreshInFlight = false;
   let disconnectObserver = null;
   const card = createElement('section', {
     className: 'pool-lock-bar pool-lock-neutral',
     attributes: { hidden: 'hidden', 'aria-live': 'polite' },
   });
   const label = createElement('p', { className: 'pool-lock-label', text: 'POOL LOCKS IN' });
-  const countdown = createElement('strong', { className: 'pool-lock-countdown' });
-  const helper = createElement('p', { className: 'pool-lock-helper', text: 'Buy in before the first game locks.' });
-  appendChildren(card, [label, countdown, helper]);
+  const countdown = createElement('strong', { className: 'pool-lock-countdown', attributes: { hidden: 'hidden' } });
+  const helper = createElement('p', { className: 'pool-lock-helper' });
+  const buyAnother = createElement('button', { className: 'primary-button', text: 'BUY ANOTHER ENTRY', attributes: { type: 'button' } });
+  appendChildren(card, [label, countdown, helper, buyAnother]);
 
   const stopTimer = () => {
     if (timerId !== null) {
@@ -2166,10 +2172,30 @@ function createPoolLockCard(bootstrapRequest) {
     }
     const remainingMs = lockAtMs - Date.now();
     if (remainingMs <= 0) {
+      if (lockMode !== 'closed') {
+        if (refreshInFlight) return;
+        refreshInFlight = true;
+        stopTimer();
+        playerAction('player.week.entrySheets')
+          .then((result) => {
+            applyEntrySheetState(result.data || {});
+            render();
+          })
+          .catch(() => {
+            lockMode = 'closed';
+            lockAtMs = 0;
+            render();
+          })
+          .finally(() => {
+            refreshInFlight = false;
+          });
+        return;
+      }
       card.className = 'pool-lock-bar pool-lock-closed';
-      label.textContent = 'POOL CLOSED FOR NEW ENTRIES THIS WEEK';
-      countdown.textContent = '00:00';
-      helper.textContent = '';
+      label.textContent = closedState === 'buy-ins' ? 'BUY-INS CLOSED' : 'ALL GAME LOCKS PASSED';
+      countdown.hidden = true;
+      helper.textContent = closedState === 'buy-ins' ? 'Come back next week.' : 'Your entries remain available for results.';
+      buyAnother.hidden = true;
       card.hidden = false;
       stopTimer();
       return;
@@ -2182,20 +2208,47 @@ function createPoolLockCard(bootstrapRequest) {
         : remainingMs <= day
           ? 'pool-lock-bar pool-lock-warning'
           : 'pool-lock-bar pool-lock-neutral';
-    label.textContent = 'POOL LOCKS IN';
+    label.textContent = lockMode === 'buy-in' ? 'BUY-INS CLOSE IN' : 'NEXT GAME LOCKS IN';
     countdown.textContent = formatCountdown(remainingMs);
-    helper.textContent = 'Buy in before the first game locks.';
+    countdown.hidden = false;
+    helper.textContent = lockMode === 'buy-in'
+      ? 'Want another shot? Grab another entry before the deadline.'
+      : 'Make sure your picks are saved before the next game locks.';
+    buyAnother.hidden = lockMode !== 'buy-in';
     card.hidden = false;
     stopTimer();
     timerId = window.setTimeout(render, remainingMs > day ? 60000 : 1000);
   };
 
+  buyAnother.addEventListener('click', () => navigateTo('player-payments'));
+  function applyEntrySheetState(entrySheets) {
+    const thisWeek = entrySheets && entrySheets.thisWeek;
+    if (!thisWeek || !thisWeek.buyInCutoffAt) {
+      card.hidden = true;
+      stopTimer();
+      return;
+    }
+    hasActiveEntry = Array.isArray(entrySheets.entries) && entrySheets.entries.length > 0;
+    nextGameLockAtMs = thisWeek.nextGameLockAt
+      ? new Date(thisWeek.nextGameLockAt).getTime()
+      : 0;
+    if (!thisWeek.buyInCutoffPassed) {
+      lockMode = 'buy-in';
+      closedState = 'buy-ins';
+      lockAtMs = new Date(thisWeek.buyInCutoffAt).getTime();
+    } else if (hasActiveEntry && thisWeek.nextGameLockAt) {
+      lockMode = 'game-lock';
+      closedState = 'games';
+      lockAtMs = nextGameLockAtMs;
+    } else {
+      lockMode = 'closed';
+      closedState = hasActiveEntry ? 'games' : 'buy-ins';
+      lockAtMs = 0;
+    }
+  }
   playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets')
     .then((entrySheets) => {
-      const firstLockAt = entrySheets.thisWeek && entrySheets.thisWeek.firstLockAt;
-      const parsed = firstLockAt ? new Date(firstLockAt).getTime() : NaN;
-      if (!entrySheets.thisWeek || !Number.isFinite(parsed)) return;
-      lockAtMs = parsed;
+      applyEntrySheetState(entrySheets);
       render();
     })
     .catch(() => undefined);
