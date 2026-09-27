@@ -1790,6 +1790,22 @@ h1 {
   font-size: 0.72rem;
 }
 
+.picks-board-player .player-name-with-badges,
+.leaderboard-table .player-name-with-badges {
+  display: inline-flex;
+}
+
+.picks-board-player .player-name-badges,
+.leaderboard-table .player-name-badges {
+  display: inline-flex;
+  flex-wrap: nowrap;
+}
+
+.picks-board-player .player-badge,
+.leaderboard-table .player-badge {
+  display: inline-block;
+}
+
 .picks-board-sticky {
   position: sticky;
   left: 0;
