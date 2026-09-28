@@ -1890,7 +1890,7 @@ export function createNotificationSettingsCard(player = {}) {
   return card;
 }
 
-export function createThisWeekHelper(bootstrapRequest, entrySheets = null) {
+export function createThisWeekHelper(bootstrapRequest, entrySheets = null, weekGradedRequest = Promise.resolve(false)) {
   const card = createElement('section', { className: 'state-card compact-card this-week-helper' });
   const body = createElement('div');
   card.hidden = true;
@@ -1954,8 +1954,17 @@ export function createThisWeekHelper(bootstrapRequest, entrySheets = null) {
   }
 
   card.appendChild(body);
-  playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets')
-    .then((data) => render(data.thisWeek))
+  Promise.all([
+    playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets'),
+    weekGradedRequest,
+  ])
+    .then(([data, weekGraded]) => {
+      if (weekGraded) {
+        card.hidden = true;
+        return;
+      }
+      render(data.thisWeek);
+    })
     .catch(() => {
       card.hidden = true;
     });
@@ -2037,6 +2046,23 @@ function currentWeekPayment(payments, weekId) {
   )) || null;
 }
 
+function currentWeekGradedRequest(bootstrapRequest) {
+  return bootstrapRequest
+    .then(async (result) => {
+      const entrySheetsSection = result.data && result.data.entrySheets;
+      const entrySheets = entrySheetsSection && entrySheetsSection.ok === true ? entrySheetsSection.data : null;
+      const weekId = String(entrySheets && entrySheets.week && entrySheets.week.weekId || '').trim();
+      if (!weekId) return false;
+      try {
+        const board = await playerAction('player.week.picksBoard', { weekId });
+        return board.data && board.data.leaderboards && board.data.leaderboards.weekly && board.data.leaderboards.weekly.graded === true;
+      } catch {
+        return false;
+      }
+    })
+    .catch(() => false);
+}
+
 function renderNextStepContent(card, state) {
   card.replaceChildren();
   const children = [
@@ -2052,7 +2078,7 @@ function renderNextStepContent(card, state) {
   appendChildren(card, children);
 }
 
-function nextStepState(entrySheetsData, paymentsData) {
+function nextStepState(entrySheetsData, paymentsData, weekGraded = false) {
   const entrySheets = entrySheetsData || {};
   const week = entrySheets.week || null;
   const thisWeek = entrySheets.thisWeek || null;
@@ -2066,6 +2092,15 @@ function nextStepState(entrySheetsData, paymentsData) {
       body: 'There is not an open week for picks right now. Check back when the manager opens the next week.',
       buttonLabel: 'VIEW RESULTS',
       route: 'player-weekly-results',
+    };
+  }
+
+  if (weekGraded) {
+    return {
+      heading: 'WEEK COMPLETE ✅',
+      body: 'The week has been graded. See the final results.',
+      buttonLabel: 'VIEW RESULTS',
+      route: `player-weekly-results?weekId=${encodeURIComponent(week.weekId)}`,
     };
   }
 
@@ -2123,7 +2158,7 @@ function nextStepState(entrySheetsData, paymentsData) {
   };
 }
 
-function createNextStepCard(bootstrapRequest) {
+function createNextStepCard(bootstrapRequest, weekGradedRequest) {
   const card = createElement('section', { className: 'state-card compact-card' });
   renderNextStepContent(card, {
     heading: 'LOADING YOUR NEXT STEP',
@@ -2132,9 +2167,10 @@ function createNextStepCard(bootstrapRequest) {
   Promise.all([
     playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets'),
     playerDashboardBootstrapSection(bootstrapRequest, 'payments').catch(() => ({ payments: [] })),
+    weekGradedRequest,
   ])
-    .then(([entrySheets, payments]) => {
-      renderNextStepContent(card, nextStepState(entrySheets, payments));
+    .then(([entrySheets, payments, weekGraded]) => {
+      renderNextStepContent(card, nextStepState(entrySheets, payments, weekGraded));
     })
     .catch((error) => {
       renderNextStepContent(card, {
@@ -2145,13 +2181,14 @@ function createNextStepCard(bootstrapRequest) {
   return card;
 }
 
-function createPoolLockCard(bootstrapRequest) {
+function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
   let timerId = null;
   let lockAtMs = 0;
   let lockMode = 'buy-in';
   let closedState = 'buy-ins';
   let hasActiveEntry = false;
   let nextGameLockAtMs = 0;
+  let weekGraded = false;
   let refreshInFlight = false;
   let disconnectObserver = null;
   const card = createElement('section', {
@@ -2188,6 +2225,11 @@ function createPoolLockCard(bootstrapRequest) {
   };
   const render = () => {
     if (!card.isConnected) {
+      stopTimer();
+      return;
+    }
+    if (weekGraded) {
+      card.hidden = true;
       stopTimer();
       return;
     }
@@ -2242,7 +2284,13 @@ function createPoolLockCard(bootstrapRequest) {
   };
 
   buyAnother.addEventListener('click', () => navigateTo('player-payments'));
-  function applyEntrySheetState(entrySheets) {
+  function applyEntrySheetState(entrySheets, graded = false) {
+    if (graded) weekGraded = true;
+    if (weekGraded) {
+      card.hidden = true;
+      stopTimer();
+      return;
+    }
     const thisWeek = entrySheets && entrySheets.thisWeek;
     if (!thisWeek || !thisWeek.buyInCutoffAt) {
       card.hidden = true;
@@ -2267,9 +2315,12 @@ function createPoolLockCard(bootstrapRequest) {
       lockAtMs = 0;
     }
   }
-  playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets')
-    .then((entrySheets) => {
-      applyEntrySheetState(entrySheets);
+  Promise.all([
+    playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets'),
+    weekGradedRequest,
+  ])
+    .then(([entrySheets, graded]) => {
+      applyEntrySheetState(entrySheets, graded);
       render();
     })
     .catch(() => undefined);
@@ -2337,11 +2388,12 @@ export function createPlayerDashboardView(context = {}) {
   const registeredPlayers = createElement('span', { className: 'status-pill status-pill-muted', attributes: { hidden: 'hidden' } });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
+  const weekGradedRequest = currentWeekGradedRequest(bootstrapRequest);
   const moraleCard = createDashboardMoraleCard(bootstrapRequest);
-  const poolLockCard = createPoolLockCard(bootstrapRequest);
-  const nextStepCard = createNextStepCard(bootstrapRequest);
+  const poolLockCard = createPoolLockCard(bootstrapRequest, weekGradedRequest);
+  const nextStepCard = createNextStepCard(bootstrapRequest, weekGradedRequest);
   const howToPlayCard = createHowToPlayCard();
-  const thisWeekHelper = createThisWeekHelper(bootstrapRequest);
+  const thisWeekHelper = createThisWeekHelper(bootstrapRequest, null, weekGradedRequest);
 
   function updateMessageBell(unreadCount) {
     const count = Number(unreadCount || 0);
