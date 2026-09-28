@@ -2278,8 +2278,9 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
     countdown.textContent = formatCountdown(remainingMs);
     countdown.hidden = false;
     helper.textContent = lockMode === 'buy-in'
-      ? 'Want another shot? Grab another entry before the deadline.'
+      ? (hasActiveEntry ? 'Want another shot? Grab another entry before the deadline.' : 'Get your entry before the deadline.')
       : 'Make sure your picks are saved before the next game locks.';
+    buyAnother.textContent = hasActiveEntry ? 'BUY ANOTHER ENTRY' : 'GET AN ENTRY';
     buyAnother.hidden = lockMode !== 'buy-in';
     card.hidden = false;
     stopTimer();

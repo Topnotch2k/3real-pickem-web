@@ -1,5 +1,5 @@
 import { createPlayerNav } from '../navigation.js?v=20260919-15';
-import { createNotificationSettingsCard, createPlayerMessagesCard } from './player-dashboard.js?v=20260920-16';
+import { createNotificationSettingsCard, createPlayerMessagesCard } from './player-dashboard.js?v=20260920-17';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
