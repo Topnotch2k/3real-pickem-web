@@ -120,7 +120,7 @@ function createGoatSplash(goatSummary, onClose) {
     attributes: { id: 'goat-splash-title' },
   });
   const message = createElement('p', {
-    className: 'goat-splash-message',
+    className: 'goat-splash-message goat-splash-player-name',
     text: presentation.message,
   });
   const seeRace = createElement('button', {

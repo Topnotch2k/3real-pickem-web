@@ -403,6 +403,10 @@ function renderGoatLeaderboard(goatSummary) {
   }
   const update = goatEventUpdate(goatSummary);
   if (update) section.appendChild(createElement('p', { className: 'muted goat-movement', text: update }));
+  appendChildren(section, [
+    createElement('p', { className: 'eyebrow', text: '🎁 SEASON-END GOAT PRIZE' }),
+    createElement('p', { className: 'muted', text: 'The crowned GOAT at the end of the season wins a mystery gift.' }),
+  ]);
   const categories = createElement('div', { className: 'goat-category-list' });
   Object.entries(GOAT_CATEGORY_LABELS).forEach(([key, label]) => {
     const category = goatSummary.categories && goatSummary.categories[key];
