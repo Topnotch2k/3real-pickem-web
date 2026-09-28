@@ -388,25 +388,43 @@ function renderGoatLeaderboard(goatSummary) {
     section.appendChild(createElement('p', { className: 'muted', text: 'The GOAT race begins after 3 graded Weeks.' }));
     return section;
   }
-  appendChildren(section, [
+  const hero = createElement('section', { className: 'goat-tab-hero' });
+  appendChildren(hero, [
     createElement('p', { className: 'eyebrow', text: 'CURRENT GOAT' }),
-    createElement('h3', { text: `🐐 ${goatSummary.playerName || 'Unknown player'}` }),
-    createElement('p', { className: 'muted', text: `${displayValue(goatSummary.goatPoints)} OF ${displayValue(goatSummary.categoryCount || 5)} CATEGORIES` }),
+    createElement('img', {
+      className: 'goat-tab-hero-image',
+      attributes: {
+        src: './assets/3real-goat.png',
+        alt: '3 Real Pick’em GOAT',
+        decoding: 'async',
+      },
+    }),
+    createElement('h3', {
+      className: 'goat-tab-hero-name',
+      text: goatSummary.playerName || 'Unknown player',
+    }),
+    createElement('p', {
+      className: 'muted goat-tab-hero-score',
+      text: `${displayValue(goatSummary.goatPoints)} OF ${displayValue(goatSummary.categoryCount || 5)} CATEGORIES`,
+    }),
   ]);
+  const update = goatEventUpdate(goatSummary);
+  if (update) hero.appendChild(createElement('p', { className: 'muted goat-movement', text: update }));
   if (goatSummary.closestChallenger) {
     const challenger = goatSummary.closestChallenger,
       gap = Number(challenger.pointsBehind);
-    section.appendChild(createElement('p', {
+    hero.appendChild(createElement('p', {
       className: 'goat-challenger',
       text: `${challenger.playerName || 'Closest challenger'} — ${challenger.tiedOnPointsButLostTieBreak ? 'TIED ON CATEGORIES — BEHIND ON TIE-BREAK' : `${gap} ${gap === 1 ? 'CATEGORY' : 'CATEGORIES'} AWAY`}`,
     }));
   }
-  const update = goatEventUpdate(goatSummary);
-  if (update) section.appendChild(createElement('p', { className: 'muted goat-movement', text: update }));
-  appendChildren(section, [
+  const prize = createElement('div', { className: 'goat-tab-prize' });
+  appendChildren(prize, [
     createElement('p', { className: 'eyebrow', text: '🎁 SEASON-END GOAT PRIZE' }),
     createElement('p', { className: 'muted', text: 'The crowned GOAT at the end of the season wins a mystery gift.' }),
   ]);
+  hero.appendChild(prize);
+  section.appendChild(hero);
   const categories = createElement('div', { className: 'goat-category-list' });
   Object.entries(GOAT_CATEGORY_LABELS).forEach(([key, label]) => {
     const category = goatSummary.categories && goatSummary.categories[key];

@@ -1683,6 +1683,50 @@ h1 {
   margin: 0;
 }
 
+.goat-tab-hero {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid rgba(217, 173, 50, 0.72);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, rgba(24, 34, 22, 0.94), rgba(7, 9, 7, 0.96));
+  box-shadow: 0 0 24px rgba(217, 173, 50, 0.16);
+  text-align: center;
+}
+
+.goat-tab-hero-image {
+  display: block;
+  width: min(52vw, 12rem);
+  max-width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.goat-tab-hero-name {
+  max-width: 100%;
+  color: var(--color-gold-soft);
+  font-size: clamp(1.7rem, 8vw, 2.8rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.goat-tab-hero-score {
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.goat-tab-prize {
+  width: 100%;
+  padding-top: var(--space-2);
+  border-top: 1px solid rgba(217, 173, 50, 0.34);
+}
+
+.goat-tab-prize .eyebrow,
+.goat-tab-prize p {
+  margin: 0;
+}
+
 .goat-category-list {
   display: grid;
   gap: var(--space-2);
