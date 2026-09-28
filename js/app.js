@@ -20,22 +20,36 @@ import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=2026
 import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260920-12';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260920-6';
 
-const APP_DEPLOYMENT_VERSION = '20260920-12';
+const APP_DEPLOYMENT_VERSION = '20260920-13';
 const UPDATE_TARGET_STORAGE_KEY = '3real-pickem-update-target';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const UPDATE_RETRY_LIMIT = 3;
+const UPDATE_RETRY_COOLDOWN_MS = 30 * 1000;
 let updateCheckPromise = null;
 
 function readUpdateTarget() {
   try {
-    return window.sessionStorage.getItem(UPDATE_TARGET_STORAGE_KEY) || '';
+    const raw = window.sessionStorage.getItem(UPDATE_TARGET_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { version: raw, attempts: 1, lastAttemptAt: 0 };
+    return {
+      version: typeof parsed.version === 'string' ? parsed.version : '',
+      attempts: Number.isInteger(parsed.attempts) ? parsed.attempts : 0,
+      lastAttemptAt: Number.isFinite(parsed.lastAttemptAt) ? parsed.lastAttemptAt : 0,
+    };
   } catch {
-    return '';
+    return null;
   }
 }
 
-function writeUpdateTarget(version) {
+function writeUpdateTarget(version, attempts) {
   try {
-    window.sessionStorage.setItem(UPDATE_TARGET_STORAGE_KEY, version);
+    window.sessionStorage.setItem(UPDATE_TARGET_STORAGE_KEY, JSON.stringify({
+      version,
+      attempts,
+      lastAttemptAt: Date.now(),
+    }));
   } catch {
     // Storage failure should not block normal app use.
   }
@@ -64,11 +78,17 @@ async function checkForFrontendUpdate() {
         clearUpdateTarget();
         return;
       }
-      if (readUpdateTarget() === deployedVersion) {
-        return;
+      const now = Date.now();
+      const previousTarget = readUpdateTarget();
+      if (previousTarget?.version === deployedVersion) {
+        if (previousTarget.attempts >= UPDATE_RETRY_LIMIT) return;
+        if (now - previousTarget.lastAttemptAt < UPDATE_RETRY_COOLDOWN_MS) return;
       }
-      writeUpdateTarget(deployedVersion);
-      window.location.reload();
+      const attempts = previousTarget?.version === deployedVersion ? previousTarget.attempts + 1 : 1;
+      writeUpdateTarget(deployedVersion, attempts);
+      const updateUrl = new URL(window.location.href);
+      updateUrl.searchParams.set('__appv', deployedVersion);
+      window.location.replace(updateUrl.toString());
     } catch {
       // Update checks are best-effort and must never interrupt gameplay.
     } finally {
