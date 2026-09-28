@@ -2198,8 +2198,7 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
   const label = createElement('p', { className: 'pool-lock-label', text: 'POOL LOCKS IN' });
   const countdown = createElement('strong', { className: 'pool-lock-countdown', attributes: { hidden: 'hidden' } });
   const helper = createElement('p', { className: 'pool-lock-helper' });
-  const buyAnother = createElement('button', { className: 'primary-button', text: 'BUY ANOTHER ENTRY', attributes: { type: 'button' } });
-  appendChildren(card, [label, countdown, helper, buyAnother]);
+  appendChildren(card, [label, countdown, helper]);
 
   const stopTimer = () => {
     if (timerId !== null) {
@@ -2260,8 +2259,8 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
       card.className = 'pool-lock-bar pool-lock-closed';
       label.textContent = closedState === 'buy-ins' ? 'BUY-INS CLOSED' : 'ALL GAME LOCKS PASSED';
       countdown.hidden = true;
+      helper.hidden = false;
       helper.textContent = closedState === 'buy-ins' ? 'Come back next week.' : 'Your entries remain available for results.';
-      buyAnother.hidden = true;
       card.hidden = false;
       stopTimer();
       return;
@@ -2277,17 +2276,11 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
     label.textContent = lockMode === 'buy-in' ? 'BUY-INS CLOSE IN' : 'NEXT GAME LOCKS IN';
     countdown.textContent = formatCountdown(remainingMs);
     countdown.hidden = false;
-    helper.textContent = lockMode === 'buy-in'
-      ? (hasActiveEntry ? 'Want another shot? Grab another entry before the deadline.' : 'Get your entry before the deadline.')
-      : 'Make sure your picks are saved before the next game locks.';
-    buyAnother.textContent = hasActiveEntry ? 'BUY ANOTHER ENTRY' : 'GET AN ENTRY';
-    buyAnother.hidden = lockMode !== 'buy-in';
+    helper.hidden = true;
     card.hidden = false;
     stopTimer();
     timerId = window.setTimeout(render, remainingMs > day ? 60000 : 1000);
   };
-
-  buyAnother.addEventListener('click', () => navigateTo('player-payments'));
   function applyEntrySheetState(entrySheets, graded = false) {
     if (graded) weekGraded = true;
     if (weekGraded) {
