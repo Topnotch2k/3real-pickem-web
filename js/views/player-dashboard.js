@@ -2207,6 +2207,10 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
       timerId = null;
     }
   };
+  const removePoolLockCard = () => {
+    stopTimer();
+    if (card.isConnected) card.remove();
+  };
   const stopWhenDisconnected = () => {
     if (!card.isConnected) {
       stopTimer();
@@ -2229,8 +2233,7 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
       return;
     }
     if (weekGraded) {
-      card.hidden = true;
-      stopTimer();
+      removePoolLockCard();
       return;
     }
     const remainingMs = lockAtMs - Date.now();
@@ -2287,8 +2290,7 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
   function applyEntrySheetState(entrySheets, graded = false) {
     if (graded) weekGraded = true;
     if (weekGraded) {
-      card.hidden = true;
-      stopTimer();
+      removePoolLockCard();
       return;
     }
     const thisWeek = entrySheets && entrySheets.thisWeek;
