@@ -66,6 +66,38 @@ function markGoatSplashSeen(playerId) {
   }
 }
 
+function goatEventPresentation(goatSummary) {
+  const eventTypes = goatSummary?.movement?.eventTypes || [],
+    playerName = goatSummary?.playerName || 'The race is on.';
+  if (eventTypes.includes('first_goat_crowned')) {
+    return {
+      title: 'THE FIRST GOAT HAS BEEN CROWNED',
+      message: playerName,
+    };
+  }
+  if (eventTypes.includes('new_goat_crowned')) {
+    return {
+      title: 'NEW GOAT CROWNED',
+      message: playerName,
+    };
+  }
+  if (eventTypes.includes('goat_defended')) {
+    return {
+      title: 'THE GOAT DEFENDS THE THRONE',
+      message: playerName,
+    };
+  }
+  if (eventTypes.includes('goat_race_tightened')) {
+    return {
+      title: 'GOAT RACE TIGHTENED',
+      message: playerName,
+    };
+  }
+  return goatSummary
+    ? { title: 'THE GOAT HAS BEEN CROWNED', message: playerName }
+    : { title: 'WHO WILL BE CROWNED?', message: 'THE GOAT RACE BEGINS AFTER 3 GRADED WEEKS' };
+}
+
 function createGoatSplash(goatSummary, onClose) {
   const overlay = createElement('div', {
     className: 'goat-splash-overlay',
@@ -81,26 +113,15 @@ function createGoatSplash(goatSummary, onClose) {
     className: 'goat-splash-image',
     attributes: { src: './assets/3real-goat.png', alt: '3 Real Pick’em GOAT', decoding: 'async' },
   });
-  const eventTypes = goatSummary?.movement?.eventTypes || [];
-  const crowned = Boolean(goatSummary);
-  const titleText = eventTypes.includes('new_goat_crowned')
-    ? 'NEW GOAT CROWNED'
-    : eventTypes.includes('goat_race_tightened')
-      ? 'GOAT RACE TIGHTENED'
-      : eventTypes.includes('goat_defended')
-        ? 'THE GOAT SURVIVES ANOTHER WEEK'
-        : crowned ? 'THE GOAT HAS BEEN CROWNED' : 'WHO WILL BE CROWNED?';
-  const messageText = crowned
-    ? `${goatSummary.playerName || 'The race is on.'}${goatSummary.closestChallenger?.pointsBehind === 1 ? ' — 1 CATEGORY AWAY' : ''}`
-    : 'THE GOAT RACE BEGINS AFTER 3 GRADED WEEKS';
+  const presentation = goatEventPresentation(goatSummary);
   const title = createElement('h2', {
     className: 'goat-splash-title',
-    text: titleText,
+    text: presentation.title,
     attributes: { id: 'goat-splash-title' },
   });
   const message = createElement('p', {
     className: 'goat-splash-message',
-    text: messageText,
+    text: presentation.message,
   });
   const seeRace = createElement('button', {
     className: 'primary-button goat-splash-cta',

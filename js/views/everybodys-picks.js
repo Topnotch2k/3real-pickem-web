@@ -372,6 +372,16 @@ const GOAT_CATEGORY_LABELS = {
   gradedWeeksPlayed: 'GRADED WEEKS',
 };
 
+function goatEventUpdate(goatSummary) {
+  const eventTypes = goatSummary?.movement?.eventTypes || [],
+    playerName = goatSummary?.playerName || 'The current GOAT';
+  if (eventTypes.includes('first_goat_crowned')) return `${playerName} has been crowned the first GOAT of the season.`;
+  if (eventTypes.includes('new_goat_crowned')) return `${playerName} has taken the GOAT crown.`;
+  if (eventTypes.includes('goat_defended')) return `${playerName} remains the GOAT after another graded week.`;
+  if (eventTypes.includes('goat_race_tightened')) return 'The GOAT race tightened this week.';
+  return '';
+}
+
 function renderGoatLeaderboard(goatSummary) {
   const section = createElement('div', { className: 'goat-leaderboard' });
   if (!goatSummary) {
@@ -391,10 +401,8 @@ function renderGoatLeaderboard(goatSummary) {
       text: `${challenger.playerName || 'Closest challenger'} — ${challenger.tiedOnPointsButLostTieBreak ? 'TIED ON CATEGORIES — BEHIND ON TIE-BREAK' : `${gap} ${gap === 1 ? 'CATEGORY' : 'CATEGORIES'} AWAY`}`,
     }));
   }
-  const movement = goatSummary.movement;
-  if (movement?.eventTypes?.length) {
-    section.appendChild(createElement('p', { className: 'muted goat-movement', text: movement.eventTypes.join(' · ').replaceAll('_', ' ').toUpperCase() }));
-  }
+  const update = goatEventUpdate(goatSummary);
+  if (update) section.appendChild(createElement('p', { className: 'muted goat-movement', text: update }));
   const categories = createElement('div', { className: 'goat-category-list' });
   Object.entries(GOAT_CATEGORY_LABELS).forEach(([key, label]) => {
     const category = goatSummary.categories && goatSummary.categories[key];
