@@ -4,7 +4,7 @@ import { registerRoute, startRouter } from './router.js?v=20260816-1';
 import { createManagerLoginView } from './views/manager-login.js?v=20260816-1';
 import { createManagerDashboardView } from './views/manager-dashboard.js?v=20260816-1';
 import { createManagerPlayersView } from './views/manager-players.js?v=20260816-1';
-import { createManagerPaymentsView } from './views/manager-payments.js?v=20260823-7';
+import { createManagerPaymentsView } from './views/manager-payments.js?v=20260920-19';
 import { createManagerWeekView } from './views/manager-week.js?v=20260920-4';
 import { createManagerMessagesView } from './views/manager-messages.js?v=20260816-1';
 import { createManagerReferralsView } from './views/manager-referrals.js?v=20260816-1';
@@ -20,7 +20,7 @@ import { createPlayerEntryPicksView } from './views/player-entry-picks.js?v=2026
 import { createEverybodysPicksView } from './views/everybodys-picks.js?v=20260920-14';
 import { createWeeklyResultsView } from './views/weekly-results.js?v=20260920-6';
 
-const APP_DEPLOYMENT_VERSION = '20260920-18';
+const APP_DEPLOYMENT_VERSION = '20260920-19';
 const UPDATE_TARGET_STORAGE_KEY = '3real-pickem-update-target';
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const UPDATE_RETRY_LIMIT = 3;

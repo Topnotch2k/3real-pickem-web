@@ -450,11 +450,11 @@ export function createManagerPaymentsView() {
       ['Submitted', formatDateTimeCt(payment.createdAt)],
     ];
     if (payment.status === 'approved') {
-      rows.push(['Approved', formatDate(payment.approvedAt)]);
+      rows.push(['Approved', formatDateTimeCt(payment.approvedAt)]);
       rows.push(['Payment status', 'Awaiting payment confirmation']);
     }
     if (payment.status === 'paid') {
-      rows.push(['Approved', formatDate(payment.approvedAt)]);
+      rows.push(['Approved', formatDateTimeCt(payment.approvedAt)]);
       rows.push(['Entries created', String(payment.entriesCreatedCount || 0)]);
     }
     if (payment.status === 'rejected') {
