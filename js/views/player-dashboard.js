@@ -93,9 +93,9 @@ function goatEventPresentation(goatSummary) {
       message: playerName,
     };
   }
-  return goatSummary
+  return goatSummary?.playerId
     ? { title: 'THE GOAT HAS BEEN CROWNED', message: playerName }
-    : { title: 'WHO WILL BE CROWNED?', message: 'THE GOAT RACE BEGINS AFTER 3 GRADED WEEKS' };
+    : { title: 'WHO WILL BE CROWNED?', message: `GOAT ELIGIBILITY CURRENTLY REQUIRES ${goatSummary?.minimumEligibleWeeks || 3} GRADED WEEKS` };
 }
 
 function createGoatSplash(goatSummary, onClose) {

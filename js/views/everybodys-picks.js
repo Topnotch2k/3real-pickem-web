@@ -371,6 +371,7 @@ const GOAT_CATEGORY_LABELS = {
   bestWeek: 'BEST WEEK',
   gradedWeeksPlayed: 'GRADED WEEKS',
 };
+const GOAT_MAX_POINTS = 20;
 
 function goatEventUpdate(goatSummary) {
   const eventTypes = goatSummary?.movement?.eventTypes || [],
@@ -384,8 +385,10 @@ function goatEventUpdate(goatSummary) {
 
 function renderGoatLeaderboard(goatSummary) {
   const section = createElement('div', { className: 'goat-leaderboard' });
-  if (!goatSummary) {
-    section.appendChild(createElement('p', { className: 'muted', text: 'The GOAT race begins after 3 graded Weeks.' }));
+  if (!goatSummary || !goatSummary.playerId) {
+    const minimum = goatSummary?.minimumEligibleWeeks || 3;
+    section.appendChild(createElement('p', { className: 'muted', text: `GOAT eligibility currently requires ${minimum} graded weeks.` }));
+    section.appendChild(createElement('p', { className: 'muted', text: 'Players must participate in at least 60% of graded regular-season weeks to qualify for the GOAT race.' }));
     return section;
   }
   const hero = createElement('section', { className: 'goat-tab-hero' });
@@ -405,7 +408,7 @@ function renderGoatLeaderboard(goatSummary) {
     }),
     createElement('p', {
       className: 'muted goat-tab-hero-score',
-      text: `${displayValue(goatSummary.goatPoints)} OF ${displayValue(goatSummary.categoryCount || 5)} CATEGORIES`,
+      text: `${displayValue(goatSummary.goatPoints)} OF ${GOAT_MAX_POINTS} GOAT POINTS`,
     }),
   ]);
   const update = goatEventUpdate(goatSummary);
@@ -415,7 +418,7 @@ function renderGoatLeaderboard(goatSummary) {
       gap = Number(challenger.pointsBehind);
     hero.appendChild(createElement('p', {
       className: 'goat-challenger',
-      text: `${challenger.playerName || 'Closest challenger'} — ${challenger.tiedOnPointsButLostTieBreak ? 'TIED ON CATEGORIES — BEHIND ON TIE-BREAK' : `${gap} ${gap === 1 ? 'CATEGORY' : 'CATEGORIES'} AWAY`}`,
+      text: `${challenger.playerName || 'Closest challenger'} — ${challenger.tiedOnPointsButLostTieBreak ? 'TIED ON GOAT POINTS — BEHIND ON TIE-BREAK' : `${gap} GOAT POINT${gap === 1 ? '' : 'S'} AWAY`}`,
     }));
   }
   const prize = createElement('div', { className: 'goat-tab-prize' });
@@ -434,6 +437,7 @@ function renderGoatLeaderboard(goatSummary) {
     const item = createElement('section', { className: 'goat-category' });
     appendChildren(item, [
       createElement('h4', { text: label }),
+      createElement('small', { className: 'muted', text: `${category.weight || 0} GOAT PTS` }),
       createElement('strong', { text: value }),
       createElement('p', { className: 'muted', text: leaders }),
     ]);
