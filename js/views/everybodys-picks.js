@@ -428,23 +428,6 @@ function renderGoatLeaderboard(goatSummary) {
   ]);
   hero.appendChild(prize);
   section.appendChild(hero);
-  const minimumEligibleWeeks = Number(goatSummary.minimumEligibleWeeks),
-    totalGradedRegularSeasonWeeks = Number(goatSummary.totalGradedRegularSeasonWeeks),
-    eligibility = createElement('section', { className: 'goat-category goat-eligibility' });
-  appendChildren(eligibility, [
-    createElement('h4', { text: 'GOAT ELIGIBILITY' }),
-    createElement('p', { text: 'Players must participate in at least 60% of graded regular-season weeks to qualify.' }),
-    createElement('p', {
-      text: `Current minimum: ${displayValue(minimumEligibleWeeks)} graded week${minimumEligibleWeeks === 1 ? '' : 's'}`,
-    }),
-  ]);
-  if (Number.isFinite(totalGradedRegularSeasonWeeks)) {
-    eligibility.appendChild(createElement('p', {
-      className: 'muted',
-      text: `Based on ${displayValue(totalGradedRegularSeasonWeeks)} graded regular-season weeks so far.`,
-    }));
-  }
-  section.appendChild(eligibility);
   const categories = createElement('div', { className: 'goat-category-list' });
   Object.entries(GOAT_CATEGORY_LABELS).forEach(([key, label]) => {
     const category = goatSummary.categories && goatSummary.categories[key];
@@ -461,6 +444,16 @@ function renderGoatLeaderboard(goatSummary) {
     categories.appendChild(item);
   });
   section.appendChild(categories);
+  const minimumEligibleWeeks = Number(goatSummary.minimumEligibleWeeks),
+    eligibility = createElement('section', { className: 'goat-category goat-eligibility' });
+  appendChildren(eligibility, [
+    createElement('h4', { text: 'GOAT ELIGIBILITY' }),
+    createElement('p', { text: 'Play at least 60% of graded regular-season weeks to qualify.' }),
+    createElement('p', {
+      text: `Current minimum: ${displayValue(minimumEligibleWeeks)} graded week${minimumEligibleWeeks === 1 ? '' : 's'}`,
+    }),
+  ]);
+  section.appendChild(eligibility);
   return section;
 }
 
