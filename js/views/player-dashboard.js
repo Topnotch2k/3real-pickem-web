@@ -1912,6 +1912,10 @@ export function createThisWeekHelper(bootstrapRequest, entrySheets = null, weekG
     }
     card.hidden = false;
     const label = thisWeekLabel(thisWeek);
+    if (thisWeek.firstLockPassed && !thisWeek.nextGameLockAt) {
+      card.hidden = true;
+      return;
+    }
     if (thisWeek.firstLockPassed) {
       const header = createElement('div', { className: 'this-week-helper-header' });
       const open = createElement('button', {
@@ -2104,6 +2108,15 @@ function nextStepState(entrySheetsData, paymentsData, weekGraded = false) {
     };
   }
 
+  if (thisWeek && thisWeek.firstLockPassed === true && !thisWeek.nextGameLockAt && entries.length > 0) {
+    return {
+      heading: 'WAITING ON A WINNER \u{1F3C6}',
+      body: 'All picks are locked. Check Everybody\'s Picks while the final games are decided.',
+      buttonLabel: 'VIEW EVERYBODY\'S PICKS',
+      route: 'player-everybodys-picks',
+    };
+  }
+
   if (thisWeek && thisWeek.firstLockPassed === true && entries.length > 0) {
     return {
       heading: 'GAMES HAVE STARTED \u{1F3C8}',
@@ -2257,10 +2270,12 @@ function createPoolLockCard(bootstrapRequest, weekGradedRequest) {
         return;
       }
       card.className = 'pool-lock-bar pool-lock-closed';
-      label.textContent = closedState === 'buy-ins' ? 'BUY-INS CLOSED' : 'ALL GAME LOCKS PASSED';
+      label.textContent = closedState === 'buy-ins' ? 'BUY-INS CLOSED' : 'WAITING ON FINAL RESULTS';
       countdown.hidden = true;
       helper.hidden = false;
-      helper.textContent = closedState === 'buy-ins' ? 'Come back next week.' : 'Your entries remain available for results.';
+      helper.textContent = closedState === 'buy-ins'
+        ? 'Come back next week.'
+        : 'All picks are locked. The winner will be determined after the remaining games finish and the week is graded.';
       card.hidden = false;
       stopTimer();
       return;
