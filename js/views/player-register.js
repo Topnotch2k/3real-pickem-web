@@ -1,4 +1,4 @@
-import { requestAction } from '../api.js?v=20260816-1';
+import { requestAction } from '../api.js?v=20260920-24';
 import { captureInviteParamsFromHash, clearInviteParamsFromHash } from '../invite.js?v=20260816-1';
 import { navigateTo } from '../router.js?v=20260816-1';
 

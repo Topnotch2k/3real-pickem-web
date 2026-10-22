@@ -22,6 +22,7 @@ const READ_ONLY_ACTIONS = new Set([
   'player.entry.picks.get',
 ]);
 const READ_RECOVERY_DELAY_MS = 350;
+const TRANSIENT_GATEWAY_STATUSES = new Set([502, 503, 504]);
 
 export class ApiError extends Error {
   constructor(message, options = {}) {
@@ -56,6 +57,32 @@ function isExpectedApiEnvelope(body) {
   return Boolean(body && typeof body === 'object' && !Array.isArray(body) && typeof body.ok === 'boolean');
 }
 
+function classifiedFetchError(error) {
+  if (error?.name === 'AbortError') {
+    return new ApiError('The league service took too long to respond. Please try again.', {
+      code: 'REQUEST_TIMEOUT',
+      details: { message: error.message },
+    });
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return new ApiError('You appear to be offline. Check your connection and try again.', {
+      code: 'OFFLINE',
+      details: { message: error?.message || '' },
+    });
+  }
+  return new ApiError('Could not reach the league backend.', {
+    code: 'NETWORK_ERROR',
+    details: { message: error?.message || '' },
+  });
+}
+
+function temporaryBackendError(status) {
+  return new ApiError('The league service is temporarily unavailable. Please try again in a moment.', {
+    code: 'TEMPORARY_BACKEND_UNAVAILABLE',
+    status,
+  });
+}
+
 export async function requestAction(action, payload = {}) {
   if (!APP_CONFIG.appsScriptWebAppUrl) {
     throw new ApiError('Apps Script Web App URL is not configured yet.', {
@@ -77,11 +104,14 @@ export async function requestAction(action, payload = {}) {
         body: JSON.stringify({ action, payload }),
       });
     } catch (error) {
-      logRequestPerformance(action, startedAt, 0, 'network_error', attempt, false);
-      throw new ApiError('Could not reach the league backend.', {
-        code: 'NETWORK_ERROR',
-        details: { message: error.message },
-      });
+      const classified = classifiedFetchError(error);
+      if (classified.code === 'NETWORK_ERROR' && attempt < maximumAttempts) {
+        logRequestPerformance(action, startedAt, 0, 'network_recovery', attempt, false);
+        await waitForReadRecovery();
+        continue;
+      }
+      logRequestPerformance(action, startedAt, 0, classified.code.toLowerCase(), attempt, false);
+      throw classified;
     }
 
     let body;
@@ -92,32 +122,43 @@ export async function requestAction(action, payload = {}) {
       parseError = error;
     }
 
-    if (parseError || !isExpectedApiEnvelope(body)) {
+    if (isExpectedApiEnvelope(body)) {
+      if (!response.ok || !body.ok) {
+        logRequestPerformance(action, startedAt, response.status, 'backend_error', attempt, false);
+        const apiError = body.error || {};
+        throw new ApiError(apiError.message || 'The league backend rejected the request.', {
+          code: apiError.code || 'BACKEND_ERROR',
+          status: response.status,
+          details: apiError.details || {},
+        });
+      }
+
+      logRequestPerformance(action, startedAt, response.status, 'success', attempt, attempt === 2);
+      return body;
+    }
+
+    if (TRANSIENT_GATEWAY_STATUSES.has(response.status)) {
       if (attempt < maximumAttempts) {
-        logRequestPerformance(action, startedAt, response.status, 'transport_recovery', attempt, false);
+        logRequestPerformance(action, startedAt, response.status, 'gateway_recovery', attempt, false);
         await waitForReadRecovery();
         continue;
       }
-      logRequestPerformance(action, startedAt, response.status, 'parse_error', attempt, false);
-      throw new ApiError('The league backend returned an unreadable response.', {
-        code: 'PARSE_ERROR',
-        status: response.status,
-        details: { message: parseError ? parseError.message : 'Response envelope is invalid.' },
-      });
+      logRequestPerformance(action, startedAt, response.status, 'temporary_backend_unavailable', attempt, false);
+      throw temporaryBackendError(response.status);
     }
 
-    if (!response.ok || !body.ok) {
-      logRequestPerformance(action, startedAt, response.status, 'backend_error', attempt, false);
-      const apiError = body.error || {};
-      throw new ApiError(apiError.message || 'The league backend rejected the request.', {
-        code: apiError.code || 'BACKEND_ERROR',
-        status: response.status,
-        details: apiError.details || {},
-      });
+    if (attempt < maximumAttempts) {
+      logRequestPerformance(action, startedAt, response.status, 'transport_recovery', attempt, false);
+      await waitForReadRecovery();
+      continue;
     }
 
-    logRequestPerformance(action, startedAt, response.status, 'success', attempt, attempt === 2);
-    return body;
+    logRequestPerformance(action, startedAt, response.status, 'parse_error', attempt, false);
+    throw new ApiError('The league backend returned an unreadable response.', {
+      code: 'PARSE_ERROR',
+      status: response.status,
+      details: { message: parseError ? parseError.message : 'Response envelope is invalid.' },
+    });
   }
 
   throw new ApiError('The league backend returned an unreadable response.', { code: 'PARSE_ERROR' });
