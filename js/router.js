@@ -1,6 +1,11 @@
 import { clearManagerSessionToken, consumePostLoginManagerValidation, validateStoredManagerSession } from './auth.js?v=20260816-1';
-import { clearPlayerSessionToken, validateStoredPlayerSession } from './player-auth.js?v=20260919-14';
-import { startPlayerPresenceHeartbeat, stopPlayerPresenceHeartbeat } from './player-presence.js?v=20260816-1';
+import {
+  clearPlayerSessionToken,
+  consumePlayerLoginStartedAt,
+  consumePostLoginPlayerValidation,
+  validateStoredPlayerSession,
+} from './player-auth.js?v=20260920-25';
+import { startPlayerPresenceHeartbeat, stopPlayerPresenceHeartbeat } from './player-presence.js?v=20260920-25';
 
 const routes = new Map();
 
@@ -37,6 +42,21 @@ function createLoadingView(message) {
   return wrapper;
 }
 
+export function resolvePlayerRouteSession(postLoginValidation, validateSession = validateStoredPlayerSession) {
+  return postLoginValidation ? Promise.resolve(postLoginValidation) : validateSession();
+}
+
+function logRoutePerformance(event, startedAt) {
+  try {
+    console.log('[3REAL_PERF] route', JSON.stringify({
+      event,
+      durationMs: Math.round(performance.now() - startedAt),
+    }));
+  } catch {
+    // Performance logging must never affect routing.
+  }
+}
+
 export function startRouter(root) {
   var renderVersion = 0;
 
@@ -45,8 +65,10 @@ export function startRouter(root) {
     const currentVersion = renderVersion;
     const routeName = getCurrentRoute();
     const route = routes.get(routeName) || routes.get('home');
+    const routeStartedAt = performance.now();
     const postLoginManagerValidation = consumePostLoginManagerValidation();
-    let context = { routeName };
+    const postLoginPlayerValidation = consumePostLoginPlayerValidation();
+    let context = { routeName, routeStartedAt };
 
     root.replaceChildren();
     root.appendChild(createLoadingView('Loading route...'));
@@ -70,7 +92,7 @@ export function startRouter(root) {
 
     if (route.options.requiresPlayerSession) {
       try {
-        const session = await validateStoredPlayerSession();
+        const session = await resolvePlayerRouteSession(postLoginPlayerValidation);
         if (!session) {
           stopPlayerPresenceHeartbeat();
           clearPlayerSessionToken();
@@ -95,6 +117,10 @@ export function startRouter(root) {
 
     root.replaceChildren();
     root.appendChild(route.renderer(context));
+    if (routeName === 'player-dashboard') {
+      const loginStartedAt = consumePlayerLoginStartedAt();
+      if (Number.isFinite(loginStartedAt)) logRoutePerformance('player_login_to_dashboard_render', loginStartedAt);
+    }
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }
 

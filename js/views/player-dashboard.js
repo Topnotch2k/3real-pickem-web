@@ -1,8 +1,8 @@
-import { getPlayerLoginSessionMarker, getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260919-14';
+import { getPlayerLoginSessionMarker, getPlayerSessionToken, logoutPlayer } from '../player-auth.js?v=20260920-25';
 import { requestAction } from '../api.js?v=20260920-24';
 import { buildInviteLink, copyInviteLink, shareInviteLink } from '../invite.js?v=20260816-1';
-import { navigateTo } from '../router.js?v=20260816-1';
-import { createPlayerNav } from '../navigation.js?v=20260919-15';
+import { navigateTo } from '../router.js?v=20260920-25';
+import { createPlayerNav } from '../navigation.js?v=20260920-25';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -27,6 +27,18 @@ function appendChildren(parent, children) {
 
 function playerAction(action, payload = {}) {
   return requestAction(action, { ...payload, sessionToken: getPlayerSessionToken() });
+}
+
+function logDashboardPerformance(event, startedAt, outcome = '') {
+  try {
+    console.log('[3REAL_PERF] dashboard', JSON.stringify({
+      event,
+      durationMs: Math.round(performance.now() - startedAt),
+      ...(outcome ? { outcome } : {}),
+    }));
+  } catch {
+    // Performance logging must never affect dashboard behavior.
+  }
 }
 
 async function playerDashboardBootstrapSection(bootstrapRequest, sectionName) {
@@ -111,7 +123,7 @@ function createGoatSplash(goatSummary, onClose) {
   });
   const image = createElement('img', {
     className: 'goat-splash-image',
-    attributes: { src: './assets/3real-goat.png', alt: '3 Real Pick’em GOAT', decoding: 'async' },
+    attributes: { src: './assets/3real-goat-display.webp', alt: '3 Real Pick’em GOAT', decoding: 'async' },
   });
   const presentation = goatEventPresentation(goatSummary);
   const title = createElement('h2', {
@@ -138,17 +150,15 @@ function createGoatSplash(goatSummary, onClose) {
   return overlay;
 }
 
-async function loadGoatSplash(wrapper, player, bootstrapRequest) {
+async function loadGoatSplash(wrapper, player, boardRequest) {
   const playerId = String(player.playerId || '').trim();
   if (!playerId) return;
   try {
-    const entrySheets = await playerDashboardBootstrapSection(bootstrapRequest, 'entrySheets');
-    const weekId = String(entrySheets.week && entrySheets.week.weekId || '').trim();
-    if (!weekId || goatSplashSeen(playerId) || !wrapper.isConnected) return;
-    const result = await playerAction('player.week.picksBoard', { weekId });
+    if (goatSplashSeen(playerId)) return;
+    const boardData = await boardRequest;
     if (!wrapper.isConnected) return;
-    if (!result.data || !Object.prototype.hasOwnProperty.call(result.data, 'goatSummary')) return;
-    let goatSummary = result.data.goatSummary;
+    if (!boardData || !Object.prototype.hasOwnProperty.call(boardData, 'goatSummary')) return;
+    let goatSummary = boardData.goatSummary;
     try {
       const history = await playerAction('player.goat.history');
       if (history.data?.latest && goatSummary) goatSummary = { ...goatSummary, ...history.data.latest };
@@ -2050,21 +2060,30 @@ function currentWeekPayment(payments, weekId) {
   )) || null;
 }
 
-function currentWeekGradedRequest(bootstrapRequest) {
+export function createDashboardPicksBoardRequest(bootstrapRequest, requestBoard = (weekId) => playerAction('player.week.picksBoard', { weekId })) {
   return bootstrapRequest
     .then(async (result) => {
       const entrySheetsSection = result.data && result.data.entrySheets;
       const entrySheets = entrySheetsSection && entrySheetsSection.ok === true ? entrySheetsSection.data : null;
       const weekId = String(entrySheets && entrySheets.week && entrySheets.week.weekId || '').trim();
-      if (!weekId) return false;
+      if (!weekId) return null;
+      const startedAt = performance.now();
       try {
-        const board = await playerAction('player.week.picksBoard', { weekId });
-        return board.data && board.data.leaderboards && board.data.leaderboards.weekly && board.data.leaderboards.weekly.graded === true;
+        const board = await requestBoard(weekId);
+        logDashboardPerformance('shared_picks_board', startedAt, 'success');
+        return board && board.data || null;
       } catch {
-        return false;
+        logDashboardPerformance('shared_picks_board', startedAt, 'error');
+        return null;
       }
     })
-    .catch(() => false);
+    .catch(() => null);
+}
+
+function currentWeekGradedRequest(boardRequest) {
+  return boardRequest.then((board) => (
+    board && board.leaderboards && board.leaderboards.weekly && board.leaderboards.weekly.graded === true
+  ));
 }
 
 function renderNextStepContent(card, state) {
@@ -2385,7 +2404,7 @@ export function createPlayerDashboardView(context = {}) {
   const logo = createElement('img', {
     className: 'player-dashboard-logo',
     attributes: {
-      src: './assets/brand/3real-pickem-logo.png',
+      src: './assets/brand/3real-pickem-logo-display.webp',
       alt: '3 Real Pick’em',
       width: '96',
       height: '96',
@@ -2398,13 +2417,24 @@ export function createPlayerDashboardView(context = {}) {
   const messageBell = createElement('button', { className: 'secondary-button status-pill status-pill-muted', text: '\u{1F514}', attributes: { type: 'button', 'aria-label': 'Open messages' } });
   const registeredPlayers = createElement('span', { className: 'status-pill status-pill-muted', attributes: { hidden: 'hidden' } });
   const logout = createElement('button', { className: 'secondary-button', text: 'Logout', attributes: { type: 'button' } });
+  const bootstrapStartedAt = performance.now();
   const bootstrapRequest = playerAction('player.dashboard.bootstrap');
-  const weekGradedRequest = currentWeekGradedRequest(bootstrapRequest);
+  const boardRequest = createDashboardPicksBoardRequest(bootstrapRequest);
+  const weekGradedRequest = currentWeekGradedRequest(boardRequest);
   const moraleCard = createDashboardMoraleCard(bootstrapRequest);
   const poolLockCard = createPoolLockCard(bootstrapRequest, weekGradedRequest);
   const nextStepCard = createNextStepCard(bootstrapRequest, weekGradedRequest);
   const howToPlayCard = createHowToPlayCard();
   const thisWeekHelper = createThisWeekHelper(bootstrapRequest, null, weekGradedRequest);
+
+  bootstrapRequest.then(() => {
+    logDashboardPerformance('bootstrap', bootstrapStartedAt, 'success');
+    if (wrapper.isConnected && Number.isFinite(context.routeStartedAt)) {
+      logDashboardPerformance('home_first_usable', context.routeStartedAt);
+    }
+  }, () => {
+    logDashboardPerformance('bootstrap', bootstrapStartedAt, 'error');
+  });
 
   function updateMessageBell(unreadCount) {
     const count = Number(unreadCount || 0);
@@ -2457,7 +2487,7 @@ export function createPlayerDashboardView(context = {}) {
     thisWeekHelper,
   ]);
   loadMessageBellCount();
-  loadGoatSplash(wrapper, player, bootstrapRequest);
+  loadGoatSplash(wrapper, player, boardRequest);
   return wrapper;
 }
 

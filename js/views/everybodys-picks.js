@@ -1,8 +1,8 @@
 import { getManagerSessionToken } from '../auth.js?v=20260816-1';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260919-14';
+import { getPlayerSessionToken } from '../player-auth.js?v=20260920-25';
 import { requestAction } from '../api.js?v=20260920-24';
-import { navigateTo } from '../router.js?v=20260816-1';
-import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260919-15';
+import { navigateTo } from '../router.js?v=20260920-25';
+import { createManagerNav, createPlayerNav } from '../navigation.js?v=20260920-25';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -57,6 +57,17 @@ function weekLabel(week) {
 
 function displayValue(value) {
   return value === '' || value === null || value === undefined ? '-' : String(value);
+}
+
+function logEverybodysPicksPerformance(event, startedAt) {
+  try {
+    console.log('[3REAL_PERF] route', JSON.stringify({
+      event,
+      durationMs: Math.round(performance.now() - startedAt),
+    }));
+  } catch {
+    // Performance logging must never affect the board.
+  }
 }
 
 function plural(value, singular, pluralText) {
@@ -397,7 +408,7 @@ function renderGoatLeaderboard(goatSummary) {
     createElement('img', {
       className: 'goat-tab-hero-image',
       attributes: {
-        src: './assets/3real-goat.png',
+        src: './assets/3real-goat-display.webp',
         alt: '3 Real Pick’em GOAT',
         decoding: 'async',
       },
@@ -550,7 +561,19 @@ function renderWeeklyResultsBanner(data, config) {
   return button;
 }
 
-export function createEverybodysPicksView({ actor = 'player', initialTab = 'weekly' } = {}) {
+export async function loadBoardBeforeGoatHistory({ loadBoard, renderBoard, loadHistory, enrichBoard }) {
+  const board = await loadBoard();
+  renderBoard(board);
+  void Promise.resolve()
+    .then(loadHistory)
+    .then(enrichBoard)
+    .catch(() => {
+      // Goat history is optional until the physical sheet is provisioned.
+    });
+  return board;
+}
+
+export function createEverybodysPicksView({ actor = 'player', initialTab = 'weekly', routeStartedAt = null } = {}) {
   const config = actorConfig(actor);
   let boardData = null;
   let loadVersion = 0;
@@ -564,7 +587,7 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
   const logo = createElement('img', {
     className: 'everybodys-picks-logo',
     attributes: {
-      src: './assets/brand/3real-pickem-logo.png',
+      src: './assets/brand/3real-pickem-logo-display.webp',
       alt: '3 Real Pick’em',
       width: '140',
       height: '140',
@@ -618,7 +641,7 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
         createElement('img', {
           className: 'everybodys-picks-goat-image',
           attributes: {
-            src: './assets/3real-goat.png',
+            src: './assets/3real-goat-display.webp',
             alt: 'Current GOAT',
             decoding: 'async',
           },
@@ -665,22 +688,29 @@ export function createEverybodysPicksView({ actor = 'player', initialTab = 'week
     leaderboardRegion.replaceChildren();
     boardRegion.replaceChildren(renderBoardNotice('Loading Everybody\'s Picks...'));
     try {
-      const result = await requestAction(config.action, actionPayload(weekId));
-      if (currentVersion !== loadVersion || !wrapper.isConnected) return;
-      boardData = result.data || {};
-      try {
-        const history = await requestAction(config.historyAction, actionPayload());
-        if (history.data?.latest && boardData.goatSummary) {
-          boardData.goatSummary = { ...boardData.goatSummary, ...history.data.latest };
-        }
-      } catch {
-        // Goat history is optional until the physical sheet is provisioned.
-      }
-      activeLeaderboardTab = hasLoadedBoard ? 'weekly' : activeLeaderboardTab;
-      hasLoadedBoard = true;
-      message.textContent = '';
-      message.classList.remove('error-text');
-      render();
+      await loadBoardBeforeGoatHistory({
+        loadBoard: () => requestAction(config.action, actionPayload(weekId)),
+        renderBoard: (result) => {
+          if (currentVersion !== loadVersion || !wrapper.isConnected) return;
+          boardData = result.data || {};
+          activeLeaderboardTab = hasLoadedBoard ? 'weekly' : activeLeaderboardTab;
+          hasLoadedBoard = true;
+          message.textContent = '';
+          message.classList.remove('error-text');
+          render();
+          if (Number.isFinite(routeStartedAt)) {
+            logEverybodysPicksPerformance('everybodys_picks_first_usable', routeStartedAt);
+          }
+        },
+        loadHistory: () => requestAction(config.historyAction, actionPayload()),
+        enrichBoard: (history) => {
+          if (currentVersion !== loadVersion || !wrapper.isConnected) return;
+          if (history.data?.latest && boardData.goatSummary) {
+            boardData.goatSummary = { ...boardData.goatSummary, ...history.data.latest };
+            render();
+          }
+        },
+      });
     } catch (error) {
       if (currentVersion !== loadVersion || !wrapper.isConnected) return;
       renderWeekOptions();

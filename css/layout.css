@@ -2082,7 +2082,7 @@ thead .picks-board-sticky {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: url('../assets/brand/3real-pickem-logo.png') center 42% / min(86vw, 34rem) auto no-repeat;
+  background: url('../assets/brand/3real-pickem-logo-display.webp') center 42% / min(86vw, 34rem) auto no-repeat;
   opacity: 0.22;
 }
 
@@ -2099,7 +2099,7 @@ thead .picks-board-sticky {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url('../assets/3real-goat.png');
+  background-image: url('../assets/3real-goat-display.webp');
   background-repeat: no-repeat;
   background-position: center 40%;
   background-size: min(90vw, 38rem) auto;

@@ -2,6 +2,13 @@ import { requestAction } from './api.js?v=20260920-24';
 
 const PLAYER_SESSION_KEY = '3real_pickem_player_session_token';
 const PLAYER_LOGIN_SESSION_KEY = '3real_pickem_player_login_session';
+const PLAYER_LOGIN_HANDOFF_TTL_MS = 30000;
+let postLoginPlayerValidationHandoff = null;
+let playerLoginStartedAt = null;
+
+function clearPostLoginPlayerValidationHandoff() {
+  postLoginPlayerValidationHandoff = null;
+}
 
 function createLoginSessionMarker() {
   if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
@@ -40,18 +47,69 @@ export function savePlayerSessionToken(token) {
 }
 
 export function clearPlayerSessionToken() {
+  clearPostLoginPlayerValidationHandoff();
+  playerLoginStartedAt = null;
   window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
 }
 
 export async function loginPlayer(displayName, pin) {
-  const result = await requestAction('player.login', { displayName, pin });
-  const token = result.data.sessionToken;
-  if (!token) {
-    throw new Error('Login did not return a player session. Try again.');
+  clearPostLoginPlayerValidationHandoff();
+  playerLoginStartedAt = performance.now();
+  try {
+    const result = await requestAction('player.login', { displayName, pin });
+    const data = result && result.data;
+    const token = data && data.sessionToken;
+    if (!token) {
+      throw new Error('Login did not return a player session. Try again.');
+    }
+    savePlayerSessionToken(token);
+    getPlayerLoginSessionMarker();
+    postLoginPlayerValidationHandoff = {
+      player: data.player,
+      sessionToken: token,
+      expiresAt: data.expiresAt,
+      createdAt: Date.now(),
+    };
+    return data;
+  } catch (error) {
+    clearPostLoginPlayerValidationHandoff();
+    playerLoginStartedAt = null;
+    throw error;
   }
-  savePlayerSessionToken(token);
-  getPlayerLoginSessionMarker();
-  return result.data;
+}
+
+export function consumePostLoginPlayerValidation() {
+  const handoff = postLoginPlayerValidationHandoff;
+  clearPostLoginPlayerValidationHandoff();
+  if (!handoff) return null;
+
+  const storedToken = getPlayerSessionToken();
+  const player = handoff.player;
+  const expiresAt = new Date(handoff.expiresAt);
+  if (
+    !storedToken
+    || typeof handoff.sessionToken !== 'string'
+    || storedToken !== handoff.sessionToken
+    || !player
+    || typeof player !== 'object'
+    || Array.isArray(player)
+    || typeof player.playerId !== 'string'
+    || !player.playerId
+    || !Number.isFinite(handoff.createdAt)
+    || Date.now() - handoff.createdAt > PLAYER_LOGIN_HANDOFF_TTL_MS
+    || Number.isNaN(expiresAt.getTime())
+    || expiresAt.getTime() <= Date.now()
+  ) {
+    return null;
+  }
+
+  return { player, expiresAt: handoff.expiresAt };
+}
+
+export function consumePlayerLoginStartedAt() {
+  const startedAt = playerLoginStartedAt;
+  playerLoginStartedAt = null;
+  return startedAt;
 }
 
 export async function validateStoredPlayerSession() {
