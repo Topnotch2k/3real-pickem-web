@@ -1,7 +1,7 @@
 import { requestAction } from '../api.js?v=20260920-24';
 import { getManagerSessionToken } from '../auth.js?v=20260816-1';
-import { navigateTo } from '../router.js?v=20260920-25';
-import { createManagerNav } from '../navigation.js?v=20260920-25';
+import { navigateTo } from '../router.js?v=20261025-01';
+import { createManagerNav } from '../navigation.js?v=20261025-01';
 
 const AVATARS = [
   { value: 'football', label: 'Football' },

@@ -1,7 +1,7 @@
 import { requestAction } from '../api.js?v=20260920-24';
-import { getPlayerSessionToken } from '../player-auth.js?v=20260920-25';
-import { createPlayerNav } from '../navigation.js?v=20260920-25';
-import { createEntrySheetsCard } from './player-dashboard.js?v=20260920-25';
+import { getPlayerSessionToken } from '../player-auth.js?v=20261025-01';
+import { createPlayerNav } from '../navigation.js?v=20261025-01';
+import { createEntrySheetsCard } from './player-dashboard.js?v=20261025-01';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);

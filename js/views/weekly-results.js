@@ -1,7 +1,7 @@
-import { getPlayerSessionToken } from '../player-auth.js?v=20260920-25';
+import { getPlayerSessionToken } from '../player-auth.js?v=20261025-01';
 import { requestAction } from '../api.js?v=20260920-24';
-import { navigateTo } from '../router.js?v=20260920-25';
-import { createPlayerNav } from '../navigation.js?v=20260920-25';
+import { navigateTo } from '../router.js?v=20261025-01';
+import { createPlayerNav } from '../navigation.js?v=20261025-01';
 
 function createElement(tagName, options = {}) {
   const element = document.createElement(tagName);
@@ -184,8 +184,6 @@ function renderResultCard(place, rows, champion = false) {
         className: champion ? 'weekly-results-score weekly-results-score-large' : 'weekly-results-score',
         text: `${displayValue(row.correctPicks)} of ${displayValue(row.totalGames)} Correct`,
       }),
-      createElement('p', { className: 'muted', text: `Tiebreaker Pick: ${tiebreakerText(row.tiebreakerCorrect)}` }),
-      createElement('p', { className: 'muted', text: `${displayValue(row.pointsAway)} Points Away` }),
       renderBadges(row.badgeCodes),
     ]);
     card.appendChild(player);
