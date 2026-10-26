@@ -4,8 +4,8 @@ import {
   consumePlayerLoginStartedAt,
   consumePostLoginPlayerValidation,
   validateStoredPlayerSession,
-} from './player-auth.js?v=20261025-01';
-import { startPlayerPresenceHeartbeat, stopPlayerPresenceHeartbeat } from './player-presence.js?v=20261025-01';
+} from './player-auth.js?v=20261025-02';
+import { startPlayerPresenceHeartbeat, stopPlayerPresenceHeartbeat } from './player-presence.js?v=20261025-02';
 
 const routes = new Map();
 

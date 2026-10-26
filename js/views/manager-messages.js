@@ -1,6 +1,6 @@
 import { getManagerSessionToken } from '../auth.js?v=20260816-1';
 import { requestAction } from '../api.js?v=20260920-24';
-import { createManagerNav } from '../navigation.js?v=20261025-01';
+import { createManagerNav } from '../navigation.js?v=20261025-02';
 import { createManagerMessagePanel } from './manager-dashboard.js?v=20260816-1';
 
 function createElement(tagName, options = {}) {
